@@ -28,28 +28,7 @@ func CreateToken(role string) (*Token, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshaling vault token: %s", err.Error())
 	}
-	fmt.Println(token)
 	return token, nil
-}
-
-// NeedsRenewal makes sure we have a valid token
-func NeedsRenewal(t Token) (bool, error) {
-	data, _, err := execute("vault", "token", "lookup", "-format=json", t.Auth.ClientToken)
-	if err != nil {
-		return false, fmt.Errorf("error looking up vault token: %s", err.Error())
-	}
-
-	token := &Token{}
-	err = json.Unmarshal(data, token)
-	if err != nil {
-		return false, fmt.Errorf("error unmarshaling vault token: %s", err.Error())
-	}
-
-	//Check the TTL and return true if it needs to be renewed.
-	if token.Data.TTL < 1800 {
-		return true, nil
-	}
-	return false, nil
 }
 
 // execute returns the output and error of a command run using inventory environment variables.
