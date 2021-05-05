@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// Token is the response of vault token lookup
+// Token represents a token structure in Vault
 type Token struct {
 	Data struct {
 		TTL int `json:"ttl"`
@@ -17,16 +17,12 @@ type Token struct {
 	} `json:"auth"`
 }
 
-// The app section should handle the loop that tells the checkToken when to run.
-
-//creates a token using the provided name
-// vault token create -role=repo-reckoner
+// Creates a token using the provided role
 func CreateToken(role string) (*Token, error) {
 	output, _, err := execute("vault", "token", "create", fmt.Sprintf("-role=%s", role), "-format=json")
 	if err != nil {
 		return nil, fmt.Errorf("Error creating token: %s", err.Error())
 	}
-	//fmt.Println(string(output))
 	token := &Token{}
 	err = json.Unmarshal([]byte(output), token)
 	if err != nil {
@@ -36,11 +32,11 @@ func CreateToken(role string) (*Token, error) {
 	return token, nil
 }
 
-// CheckToken makes sure we have a valid token
-func CheckToken(t Token) (bool, error) {
+// NeedsRenewal makes sure we have a valid token
+func NeedsRenewal(t Token) (bool, error) {
 	data, _, err := execute("vault", "token", "lookup", "-format=json", t.Auth.ClientToken)
 	if err != nil {
-		return false, fmt.Errorf("error unmarshaling vault token: %s", err.Error())
+		return false, fmt.Errorf("error looking up vault token: %s", err.Error())
 	}
 
 	token := &Token{}
@@ -49,7 +45,7 @@ func CheckToken(t Token) (bool, error) {
 		return false, fmt.Errorf("error unmarshaling vault token: %s", err.Error())
 	}
 
-	//Check the expiry time and return true or false that it needs to be renewed.
+	//Check the TTL and return true if it needs to be renewed.
 	if token.Data.TTL < 1800 {
 		return true, nil
 	}
@@ -64,6 +60,5 @@ func execute(name string, arg ...string) ([]byte, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("exit code %d running command %s: %s", cmd.ProcessState.ExitCode(), cmd.String(), output)
 	}
-	//klog.V(5).Infof("command %s output: %s", cmd.String(), output)
 	return data, output, nil
 }
