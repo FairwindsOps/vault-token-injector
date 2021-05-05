@@ -29,9 +29,9 @@ type config struct {
 }
 
 type circleCIConfig struct {
-	Name      string `yaml:"name"`
-	VauleRole string `yaml:"vault_role"`
-	EnvVar    string `yaml:"env_variable"`
+	Name      string `mapstructure:"name"`
+	VaultRole string `mapstructure:"vault_role"`
+	EnvVar    string `mapstructure:"env_variable"`
 }
 
 var cfgFile string
