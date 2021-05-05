@@ -19,46 +19,29 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/fairwindsops/vault-token-injector/pkg/app"
 )
-
-type config struct {
-	CircleCI []circleCIConfig `mapstructure:"circleci"`
-}
-
-type circleCIConfig struct {
-	Name      string `mapstructure:"name"`
-	VaultRole string `mapstructure:"vault_role"`
-	EnvVar    string `mapstructure:"env_variable"`
-}
 
 var cfgFile string
 
-// rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "vault-token-injector",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
+	Short: "Inject vault tokens into other things",
+	Long: `vault-token-injector will generate a new vault token given a vault role
+and populate that token into environment variables used by other tools such as CircleCI`,
 	RunE: run,
 }
 
 func run(cmd *cobra.Command, args []string) error {
-	config := &config{}
-	err := viper.Unmarshal(config)
+	app := app.NewApp()
+	err := viper.Unmarshal(app.Config)
 	if err != nil {
 		return err
 	}
-	spew.Dump(config)
-	return nil
+	return app.Run()
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -69,16 +52,7 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.vault-token-injector.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .vault-token-injector.yaml in the current directory)")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -92,11 +66,11 @@ func initConfig() {
 		viper.SetConfigType("yaml")
 		viper.AddConfigPath(".")
 	}
-
-	viper.AutomaticEnv() // read in environment variables that match
-
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	} else {
+		fmt.Fprintln(os.Stderr, "Failed reading a config file.")
+		os.Exit(1)
 	}
 }
