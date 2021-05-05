@@ -19,11 +19,20 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/spf13/cobra"
-
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
+
+type config struct {
+	CircleCI []circleCIConfig `mapstructure:"circleci"`
+}
+
+type circleCIConfig struct {
+	Name      string `mapstructure:"name"`
+	VaultRole string `mapstructure:"vault_role"`
+	EnvVar    string `mapstructure:"env_variable"`
+}
 
 var cfgFile string
 
@@ -39,7 +48,17 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	RunE: run,
+}
+
+func run(cmd *cobra.Command, args []string) error {
+	config := &config{}
+	err := viper.Unmarshal(config)
+	if err != nil {
+		return err
+	}
+	spew.Dump(config)
+	return nil
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -68,13 +87,10 @@ func initConfig() {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Find home directory.
-		home, err := homedir.Dir()
-		cobra.CheckErr(err)
-
 		// Search config in home directory with name ".vault-token-injector" (without extension).
-		viper.AddConfigPath(home)
 		viper.SetConfigName(".vault-token-injector")
+		viper.SetConfigType("yaml")
+		viper.AddConfigPath(".")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
