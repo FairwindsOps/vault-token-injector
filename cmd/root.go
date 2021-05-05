@@ -25,7 +25,7 @@ import (
 )
 
 type config struct {
-	CircleCI []circleCIConfig `yaml:"circleci"`
+	CircleCI []circleCIConfig `mapstructure:"circleci"`
 }
 
 type circleCIConfig struct {
