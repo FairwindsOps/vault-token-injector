@@ -70,7 +70,7 @@ func (a *App) updateCircleCI() error {
 		if err := circleci.UpdateEnvVar(projName, projVariableName, token.Auth.ClientToken, a.CircleToken); err != nil {
 			return err
 		}
-		if err := circleci.UpdateEnvVar(projName, "VAULT_ADDRESS", a.Config.VaultAddress, a.CircleToken); err != nil {
+		if err := circleci.UpdateEnvVar(projName, "VAULT_ADDR", a.Config.VaultAddress, a.CircleToken); err != nil {
 			return err
 		}
 

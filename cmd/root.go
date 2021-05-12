@@ -102,7 +102,7 @@ func initConfig() {
 	}
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		klog.Infof("Using config file:", viper.ConfigFileUsed())
+		klog.Infof("Using config file: %s", viper.ConfigFileUsed())
 	} else {
 		klog.Fatal("Failed reading a config file.")
 	}
