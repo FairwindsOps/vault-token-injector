@@ -1,12 +1,32 @@
-# vault-token-injector
-A loop to keep vault access tokens up to date in circleci. 
-This will minimize the lift during key rotations in our build environments by removing all but the short lived vault tokens from CircleCi.
+<div align="center" class="no-border">
+  <h3>Automatic Vault Token Injector</h3>
+  <a href="https://github.com/FairwindsOps/vault-token-injector">
+    <img src="https://img.shields.io/github/v/release/FairwindsOps/vault-token-injector">
+  </a>
+  <a href="https://goreportcard.com/report/github.com/FairwindsOps/vault-token-injector">
+    <img src="https://goreportcard.com/badge/github.com/FairwindsOps/vault-token-injector">
+  </a>
+  <a href="https://circleci.com/gh/FairwindsOps/vault-token-injector.svg">
+    <img src="https://circleci.com/gh/FairwindsOps/vault-token-injector.svg?style=svg">
+  </a>
+  <a href="https://insights.fairwinds.com/gh/FairwindsOps/vault-token-injector">
+    <img src="https://insights.fairwinds.com/v0/gh/FairwindsOps/vault-token-injector/badge.svg">
+  </a>
+</div>
 
-Injects new tokens in to circleci on startup and every 30 minutes.
+# vault-token-injector
+
+A loop to keep vault access tokens up-to-date in circleci
+
+Injects new tokens into circleci build environments on startup and every 30 minutes. Also injects the `VAULT_ADDR` variable.
 
 # Configuration
 
 An example configuration file is present [here](example_config.yaml). Whatever circleci projects are mentioned will update the given `env_variable` in the project workspace. The vault token for that project is created with the provided `vault_role`.
 
-Future: 
-Configure for TF Cloud.
+## Future Planned Enhancements
+
+* Support for Terraform Cloud in addition to CirlceCI
+* Customizable Timing (not hard-coded to 30m)
+* Staggered token injections
+* Disable `VAULT_ADDR` injection
