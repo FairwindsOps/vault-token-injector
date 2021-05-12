@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func UpdateTokenVar(projName, env_variable_name, env_variable_value string) error {
+func UpdateEnvVar(projName, env_variable_name, env_variable_value string) error {
 
 	url := fmt.Sprintf("https://circleci.com/api/v2/project/gh/%s/envvar", projName)
 	payload := strings.NewReader(fmt.Sprintf("{\"name\":\"%s\",\"value\":\"%s\"}", env_variable_name, env_variable_value))

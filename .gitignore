@@ -1,2 +1,3 @@
 .vault-token-injector.yaml
 hack/
+/vault-token-injector

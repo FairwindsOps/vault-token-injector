@@ -16,11 +16,9 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"k8s.io/klog/v2"
 
 	"github.com/fairwindsops/vault-token-injector/pkg/app"
 )
@@ -53,6 +51,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .vault-token-injector.yaml in the current directory)")
+	klog.InitFlags(nil)
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -68,9 +67,8 @@ func initConfig() {
 	}
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+		klog.Infof("Using config file:", viper.ConfigFileUsed())
 	} else {
-		fmt.Fprintln(os.Stderr, "Failed reading a config file.")
-		os.Exit(1)
+		klog.Fatal("Failed reading a config file.")
 	}
 }

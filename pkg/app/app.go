@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/fairwindsops/vault-token-injector/pkg/circleci"
 	"github.com/fairwindsops/vault-token-injector/pkg/vault"
+	"k8s.io/klog/v2"
 )
 
 type App struct {
@@ -17,7 +17,8 @@ type App struct {
 
 // Config represents the top level our applications config yaml file
 type Config struct {
-	CircleCI []CircleCIConfig `mapstructure:"circleci"`
+	CircleCI     []CircleCIConfig `mapstructure:"circleci"`
+	VaultAddress string           `mapstructure:"vault-address"`
 }
 
 // CircleCIConfig represents a specific instance of a CircleCI project we want to
@@ -39,11 +40,11 @@ func (a *App) Run() error {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigs
-		fmt.Println("Exiting, received termination signal")
-		os.Exit(1)
+		klog.Info("exiting - received termination signal")
+		os.Exit(0)
 	}()
 
-	fmt.Println("Starting main application loop.")
+	klog.Info("starting main application loop")
 	for {
 		err := a.updateCircleCI()
 		if err != nil {
@@ -60,15 +61,16 @@ func (a *App) updateCircleCI() error {
 		vaultRole := project.VaultRole
 		token, err := vault.CreateToken(vaultRole)
 		if err != nil {
-			fmt.Println("Error creating vault token.")
 			return err
 		}
-		fmt.Printf("Updating token for CircleCI project '%s'\n", projName)
-		err = circleci.UpdateTokenVar(projName, projVariableName, token.Auth.ClientToken)
-		if err != nil {
-			fmt.Println("Error creating updating CircleCI Env Var.")
+		klog.Infof("updating token for circleCI project '%s'\n", projName)
+		if err := circleci.UpdateEnvVar(projName, projVariableName, token.Auth.ClientToken); err != nil {
 			return err
 		}
+		if err := circleci.UpdateEnvVar(projName, "VAULT_ADDRESS", a.Config.VaultAddress); err != nil {
+			return err
+		}
+
 	}
 	return nil
 }
