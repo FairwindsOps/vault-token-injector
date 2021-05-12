@@ -13,17 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package cmd
 
-import "github.com/fairwindsops/vault-token-injector/cmd"
+import (
+	"fmt"
 
-var (
-	// version is set during build
-	version = "development"
-	// commit is set during build
-	commit = "n/a"
+	"github.com/spf13/cobra"
 )
 
-func main() {
-	cmd.Execute(version, commit)
+var (
+	version       string
+	versionCommit string
+)
+
+func init() {
+	rootCmd.AddCommand(versionCmd)
+}
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Prints the current version of the tool.",
+	Long:  `Prints the current version.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Version:" + version + " Commit:" + versionCommit)
+	},
 }

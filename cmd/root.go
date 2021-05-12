@@ -58,7 +58,9 @@ func validateArgs(cmd *cobra.Command, args []string) error {
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
+func Execute(VERSION string, COMMIT string) {
+	version = VERSION
+	versionCommit = COMMIT
 	cobra.CheckErr(rootCmd.Execute())
 }
 
