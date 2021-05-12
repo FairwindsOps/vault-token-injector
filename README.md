@@ -31,3 +31,4 @@ An example configuration file is present [here](example_config.yaml). Whatever c
 * Staggered token injections
 * Disable `VAULT_ADDR` injection
 * Use Vault API instead of vault binary
+* Prometheus endpoint to bubble up errors and sucesses

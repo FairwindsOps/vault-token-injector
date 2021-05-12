@@ -51,7 +51,7 @@ func (a *App) Run() error {
 	for {
 		err := a.updateCircleCI()
 		if err != nil {
-			return err
+			klog.Error(err)
 		}
 		time.Sleep(30 * time.Minute)
 	}
