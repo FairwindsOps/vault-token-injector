@@ -21,27 +21,39 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"k8s.io/klog/v2"
 
 	"github.com/fairwindsops/vault-token-injector/pkg/app"
 )
 
-var cfgFile string
+var (
+	cfgFile     string
+	circleToken string
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "vault-token-injector",
 	Short: "Inject vault tokens into other things",
 	Long: `vault-token-injector will generate a new vault token given a vault role
 and populate that token into environment variables used by other tools such as CircleCI`,
-	RunE: run,
+	PreRunE: validateArgs,
+	RunE:    run,
 }
 
 func run(cmd *cobra.Command, args []string) error {
-	app := app.NewApp()
+	app := app.NewApp(circleToken)
 	err := viper.Unmarshal(app.Config)
 	if err != nil {
 		return err
 	}
 	return app.Run()
+}
+
+func validateArgs(cmd *cobra.Command, args []string) error {
+	if circleToken == "" {
+		return fmt.Errorf("you must set CIRCLE_CI_TOKEN or pass --circle-token")
+	}
+	return nil
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -52,7 +64,29 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .vault-token-injector.yaml in the current directory)")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is .vault-token-injector.yaml in the current directory)")
+	rootCmd.PersistentFlags().StringVar(&circleToken, "circle-token", "", "A circleci token.")
+
+	envMap := map[string]string{
+		"CIRCLE_CI_TOKEN": "circle-token",
+	}
+
+	for env, flagName := range envMap {
+		flag := rootCmd.PersistentFlags().Lookup(flagName)
+		if flag == nil {
+			klog.Errorf("Could not find flag %s", flagName)
+			continue
+		}
+		flag.Usage = fmt.Sprintf("%v [%v]", flag.Usage, env)
+		if value := os.Getenv(env); value != "" {
+			err := flag.Value.Set(value)
+			if err != nil {
+				klog.Errorf("Error setting flag %v to %s from environment variable %s", flag, value, env)
+			}
+		}
+	}
+
+	klog.InitFlags(nil)
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -68,9 +102,8 @@ func initConfig() {
 	}
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+		klog.Infof("Using config file: %s", viper.ConfigFileUsed())
 	} else {
-		fmt.Fprintln(os.Stderr, "Failed reading a config file.")
-		os.Exit(1)
+		klog.Fatal("Failed reading a config file.")
 	}
 }

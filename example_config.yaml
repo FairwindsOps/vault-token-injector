@@ -1,3 +1,4 @@
+vault-address: "https://vault.example.com"
 circleci:
 - name: FairwindsOps/vault-token-injector
   vault_role: repo-vault-token-injector

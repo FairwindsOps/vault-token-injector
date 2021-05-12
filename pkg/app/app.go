@@ -1,23 +1,26 @@
 package app
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"k8s.io/klog/v2"
 
 	"github.com/fairwindsops/vault-token-injector/pkg/circleci"
 	"github.com/fairwindsops/vault-token-injector/pkg/vault"
 )
 
 type App struct {
-	Config *Config
+	Config      *Config
+	CircleToken string
 }
 
 // Config represents the top level our applications config yaml file
 type Config struct {
-	CircleCI []CircleCIConfig `mapstructure:"circleci"`
+	CircleCI     []CircleCIConfig `mapstructure:"circleci"`
+	VaultAddress string           `mapstructure:"vault-address"`
 }
 
 // CircleCIConfig represents a specific instance of a CircleCI project we want to
@@ -28,9 +31,10 @@ type CircleCIConfig struct {
 	EnvVar    string `mapstructure:"env_variable"`
 }
 
-func NewApp() *App {
+func NewApp(circleToken string) *App {
 	return &App{
-		Config: new(Config),
+		Config:      new(Config),
+		CircleToken: circleToken,
 	}
 }
 
@@ -39,11 +43,11 @@ func (a *App) Run() error {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigs
-		fmt.Println("Exiting, received termination signal")
-		os.Exit(1)
+		klog.Info("exiting - received termination signal")
+		os.Exit(0)
 	}()
 
-	fmt.Println("Starting main application loop.")
+	klog.Info("starting main application loop")
 	for {
 		err := a.updateCircleCI()
 		if err != nil {
@@ -60,15 +64,16 @@ func (a *App) updateCircleCI() error {
 		vaultRole := project.VaultRole
 		token, err := vault.CreateToken(vaultRole)
 		if err != nil {
-			fmt.Println("Error creating vault token.")
 			return err
 		}
-		fmt.Printf("Updating token for CircleCI project '%s'\n", projName)
-		err = circleci.UpdateTokenVar(projName, projVariableName, token.Auth.ClientToken)
-		if err != nil {
-			fmt.Println("Error creating updating CircleCI Env Var.")
+		klog.Infof("setting env var %s to vault token value", projVariableName)
+		if err := circleci.UpdateEnvVar(projName, projVariableName, token.Auth.ClientToken, a.CircleToken); err != nil {
 			return err
 		}
+		if err := circleci.UpdateEnvVar(projName, "VAULT_ADDR", a.Config.VaultAddress, a.CircleToken); err != nil {
+			return err
+		}
+
 	}
 	return nil
 }
