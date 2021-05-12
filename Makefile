@@ -29,4 +29,4 @@ clean:
 build-linux:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(BINARY_NAME) -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT) -s -w" -v
 build-docker:
-	docker build --build-arg version=$(VERSION) --build-arg commit=$(COMMIT) -t quay.io/reactiveops/$(BINARY_NAME):dev .
+	docker build --build-arg version=$(VERSION) --build-arg commit=$(COMMIT) -t quay.io/fairwinds/$(BINARY_NAME):dev .
