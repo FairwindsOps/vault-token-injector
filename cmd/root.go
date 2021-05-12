@@ -36,7 +36,8 @@ var rootCmd = &cobra.Command{
 	Short: "Inject vault tokens into other things",
 	Long: `vault-token-injector will generate a new vault token given a vault role
 and populate that token into environment variables used by other tools such as CircleCI`,
-	RunE: run,
+	PreRunE: validateArgs,
+	RunE:    run,
 }
 
 func run(cmd *cobra.Command, args []string) error {
@@ -46,6 +47,13 @@ func run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	return app.Run()
+}
+
+func validateArgs(cmd *cobra.Command, args []string) error {
+	if circleToken == "" {
+		return fmt.Errorf("you must set CIRCLE_CI_TOKEN or pass --circle-token")
+	}
+	return nil
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
