@@ -30,3 +30,4 @@ An example configuration file is present [here](example_config.yaml). Whatever c
 * Customizable Timing (not hard-coded to 30m)
 * Staggered token injections
 * Disable `VAULT_ADDR` injection
+* Use Vault API instead of vault binary
