@@ -6,13 +6,15 @@ import (
 	"syscall"
 	"time"
 
+	"k8s.io/klog/v2"
+
 	"github.com/fairwindsops/vault-token-injector/pkg/circleci"
 	"github.com/fairwindsops/vault-token-injector/pkg/vault"
-	"k8s.io/klog/v2"
 )
 
 type App struct {
-	Config *Config
+	Config      *Config
+	CircleToken string
 }
 
 // Config represents the top level our applications config yaml file
@@ -29,9 +31,10 @@ type CircleCIConfig struct {
 	EnvVar    string `mapstructure:"env_variable"`
 }
 
-func NewApp() *App {
+func NewApp(circleToken string) *App {
 	return &App{
-		Config: new(Config),
+		Config:      new(Config),
+		CircleToken: circleToken,
 	}
 }
 
@@ -64,10 +67,10 @@ func (a *App) updateCircleCI() error {
 			return err
 		}
 		klog.Infof("updating token for circleCI project '%s'\n", projName)
-		if err := circleci.UpdateEnvVar(projName, projVariableName, token.Auth.ClientToken); err != nil {
+		if err := circleci.UpdateEnvVar(projName, projVariableName, token.Auth.ClientToken, a.CircleToken); err != nil {
 			return err
 		}
-		if err := circleci.UpdateEnvVar(projName, "VAULT_ADDRESS", a.Config.VaultAddress); err != nil {
+		if err := circleci.UpdateEnvVar(projName, "VAULT_ADDRESS", a.Config.VaultAddress, a.CircleToken); err != nil {
 			return err
 		}
 

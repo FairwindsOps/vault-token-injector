@@ -16,6 +16,9 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"k8s.io/klog/v2"
@@ -23,7 +26,10 @@ import (
 	"github.com/fairwindsops/vault-token-injector/pkg/app"
 )
 
-var cfgFile string
+var (
+	cfgFile     string
+	circleToken string
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "vault-token-injector",
@@ -34,7 +40,7 @@ and populate that token into environment variables used by other tools such as C
 }
 
 func run(cmd *cobra.Command, args []string) error {
-	app := app.NewApp()
+	app := app.NewApp(circleToken)
 	err := viper.Unmarshal(app.Config)
 	if err != nil {
 		return err
@@ -51,6 +57,27 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is .vault-token-injector.yaml in the current directory)")
+	rootCmd.PersistentFlags().StringVar(&circleToken, "circle-token", "", "A circleci token.")
+
+	envMap := map[string]string{
+		"CIRCLE_CI_TOKEN": "circle-token",
+	}
+
+	for env, flagName := range envMap {
+		flag := rootCmd.PersistentFlags().Lookup(flagName)
+		if flag == nil {
+			klog.Errorf("Could not find flag %s", flagName)
+			continue
+		}
+		flag.Usage = fmt.Sprintf("%v [%v]", flag.Usage, env)
+		if value := os.Getenv(env); value != "" {
+			err := flag.Value.Set(value)
+			if err != nil {
+				klog.Errorf("Error setting flag %v to %s from environment variable %s", flag, value, env)
+			}
+		}
+	}
+
 	klog.InitFlags(nil)
 }
 
