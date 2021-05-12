@@ -11,8 +11,7 @@ RUN go mod download
 COPY . .
 RUN VERSION=$version COMMIT=$commit make build-linux
 
-FROM alpine:3.13
-RUN apk --no-cache --update add ca-certificates tzdata && update-ca-certificates
+FROM hashicorp/vault:1.7.1
 
 USER nobody
 COPY --from=build-env /go/src/github.com/fairwindsops/vault-token-injector/vault-token-injector /
