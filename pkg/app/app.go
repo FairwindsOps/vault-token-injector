@@ -66,7 +66,7 @@ func (a *App) updateCircleCI() error {
 		if err != nil {
 			return err
 		}
-		klog.Infof("updating token for circleCI project '%s'\n", projName)
+		klog.Infof("setting env var %s to vault token value", projVariableName)
 		if err := circleci.UpdateEnvVar(projName, projVariableName, token.Auth.ClientToken, a.CircleToken); err != nil {
 			return err
 		}

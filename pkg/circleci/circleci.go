@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"k8s.io/klog/v2"
 )
 
 func UpdateEnvVar(projName, env_variable_name, env_variable_value, circleToken string) error {
-
+	klog.Infof("setting env var %s in CircleCI project %s", env_variable_name, projName)
 	url := fmt.Sprintf("https://circleci.com/api/v2/project/gh/%s/envvar", projName)
 	payload := strings.NewReader(fmt.Sprintf("{\"name\":\"%s\",\"value\":\"%s\"}", env_variable_name, env_variable_value))
 
