@@ -12,7 +12,7 @@ jobs:
           vault_path: repo/global/env
       - run: echo "${FAIRWINDS_QUAY_USER}"
   test:
-    working_directory: /go/src/github.com/fairwindsops/pluto
+    working_directory: /go/src/github.com/fairwindsops/vault-token-injector
 
     docker:
       - image: circleci/golang:1.16-buster
