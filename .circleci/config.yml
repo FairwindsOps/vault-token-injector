@@ -21,8 +21,8 @@ references:
         tar -C /usr/local -xzf go1.16.4.linux-amd64.tar.gz
         echo "PATH=$PATH:/usr/local/go/bin" >> ${BASH_ENV}
 jobs:
-  test:
-    working_directory: /go/src/github.com/fairwindsops/pluto
+  test
+    working_directory: /go/src/github.com/fairwindsops/vault-token-injector
     docker:
       - image: circleci/golang:1.16-buster
         environment:
