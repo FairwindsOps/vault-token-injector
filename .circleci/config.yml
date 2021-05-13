@@ -4,40 +4,94 @@ version: 2.1
 orbs:
   rok8s: fairwinds/rok8s-scripts@11
 
+references:
+  install_goreleaser: &install_goreleaser
+    run:
+      name: Install Goreleaser
+      command: |
+        curl -fsSLo goreleaser_amd64.deb https://github.com/goreleaser/goreleaser/releases/download/v0.164.0/goreleaser_amd64.deb
+        echo "577c88019cca787161ee1ff853d45be7f635ad7d8a204bd7a2735ab04abcc255  goreleaser_amd64.deb" | sha256sum -c -
+        sudo dpkg -i goreleaser_amd64.deb
+        rm goreleaser_amd64.deb
+  install_go: &install_go
+    run:
+      name: Install Golang
+      command: |
+        curl -LO https://golang.org/dl/go1.16.4.linux-amd64.tar.gz
+        tar -C /usr/local -xzf go1.16.4.linux-amd64.tar.gz
+        echo "PATH=$PATH:/usr/local/go/bin" >> ${BASH_ENV}
 jobs:
-  getvaultenv:
-    executor: rok8s/ci-images
-    steps:
-      - rok8s/get_vault_env:
-          vault_path: repo/global/env
-      - run: echo "${FAIRWINDS_QUAY_USER}"
   test:
     working_directory: /go/src/github.com/fairwindsops/vault-token-injector
-
     docker:
       - image: circleci/golang:1.16-buster
         environment:
           GO111MODULE: "on"
     steps:
       - checkout
-      - run: go mod download && go mod verify
-      - run: go test -v ./... -coverprofile=coverage.txt -covermode=atomic
-
+      - run:
+          name: Go Mod
+          command: go mod download && go mod verify
+      - run:
+          name: Run Tests
+          command: |
+            go test -v ./... -coverprofile=coverage.txt -covermode=atomic
+            go get -u github.com/jstemmer/go-junit-report
+            mkdir -p /tmp/test_results/junit
+            go test -v ./... -count 5 2>&1 | go-junit-report > /tmp/test_results/junit/report.xml
+      - store_test_results:
+          path: /tmp/test_results
+  release:
+    docker:
+      - image: quay.io/reactiveops/ci-images:v11-buster
+    steps:
+      - checkout
+      - rok8s/get_vault_env:
+          vault_path: repo/global/env
+      - *install_go
+      - *install_goreleaser
+      - setup_remote_docker
+      - rok8s/docker_login:
+          username: ${FAIRWINDS_QUAY_USER}
+          password-variable: FAIRWINDS_QUAY_TOKEN
+      - run:
+          name: Goreleaser
+          command: goreleaser
+  snapshot:
+    docker:
+      - image: quay.io/reactiveops/ci-images:v11-buster
+    steps:
+      - checkout
+      - *install_go
+      - *install_goreleaser
+      - setup_remote_docker
+      - run:
+          name: Goreleaser Snapshot
+          command: goreleaser --snapshot
+      - store_artifacts:
+          path: dist
+          destination: snapshot
 workflows:
   version: 2
   test:
     jobs:
-      - getvaultenv:
-          filters:
-            branches:
-              only: sudermanjr/vaultenvci
-            tags:
-              only: /.*/
       - test:
-          requires:
-            - getvaultenv
           filters:
             branches:
-              only: sudermanjr/vaultenvci
-            tags:
               only: /.*/
+            tags:
+              ignore: /.*/
+      - snapshot:
+          requires:
+            - test
+          filters:
+            branches:
+              only: /.*/
+            tags:
+              ignore: /.*/
+      - release:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /v.*/

@@ -1,0 +1,20 @@
+builds:
+  - ldflags:
+      - -X main.version={{.Version}} -X main.commit={{.Commit}} -s -w
+    goarch:
+      - amd64
+      - arm
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarm:
+      - 6
+      - 7
+dockers:
+- image_templates:
+  - "quay.io/fairwinds/vault-token-injector:{{ .Tag }}"
+  - "quay.io/fairwinds/vault-token-injector:v{{ .Major }}"
+  - "quay.io/fairwinds/vault-token-injector:v{{ .Major }}.{{ .Minor }}"
