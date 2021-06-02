@@ -42,20 +42,10 @@ and populate that token into environment variables used by other tools such as C
 }
 
 func run(cmd *cobra.Command, args []string) error {
-	app := app.NewApp(circleToken)
+	app := app.NewApp(circleToken, vaultTokenFile)
 	err := viper.Unmarshal(app.Config)
 	if err != nil {
 		return err
-	}
-
-	if vaultTokenFile != "" {
-		tokenData, err := os.ReadFile(vaultTokenFile)
-		if err != nil {
-			return fmt.Errorf("vault-token-file is set but could not be opened: %s", err.Error())
-		}
-		if err := os.Setenv("VAULT_TOKEN", string(tokenData)); err != nil {
-			return fmt.Errorf("could not set VAULT_TOKEN from file: %s", err.Error())
-		}
 	}
 
 	return app.Run()

@@ -7,7 +7,8 @@ import (
 
 func TestNewApp(t *testing.T) {
 	type args struct {
-		circleToken string
+		circleToken    string
+		vaultTokenFile string
 	}
 	tests := []struct {
 		name string
@@ -17,17 +18,19 @@ func TestNewApp(t *testing.T) {
 		{
 			name: "basic",
 			args: args{
-				circleToken: "foo",
+				circleToken:    "foo",
+				vaultTokenFile: "",
 			},
 			want: &App{
-				CircleToken: "foo",
-				Config:      &Config{},
+				CircleToken:    "foo",
+				VaultTokenFile: "",
+				Config:         &Config{},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewApp(tt.args.circleToken); !reflect.DeepEqual(got, tt.want) {
+			if got := NewApp(tt.args.circleToken, tt.args.vaultTokenFile); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewApp() = %v, want %v", got, tt.want)
 			}
 		})
