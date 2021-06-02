@@ -79,7 +79,6 @@ func (a *App) updateCircleCI() error {
 		if err := circleci.UpdateEnvVar(projName, "VAULT_ADDR", a.Config.VaultAddress, a.CircleToken); err != nil {
 			return err
 		}
-
 	}
 	return nil
 }

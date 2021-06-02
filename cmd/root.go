@@ -70,10 +70,6 @@ func Execute(VERSION string, COMMIT string) {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	klog.InitFlags(nil)
-
-	// Add specific flags from klog package
-	pflag.CommandLine.AddGoFlag(flag.CommandLine.Lookup("v"))
 
 	rootCmd.Flags().StringVarP(&cfgFile, "config", "c", "", "config file (default is .vault-token-injector.yaml in the current directory)")
 	rootCmd.Flags().StringVar(&circleToken, "circle-token", "", "A circleci token.")
@@ -85,7 +81,7 @@ func init() {
 	}
 
 	for env, flagName := range envMap {
-		flag := rootCmd.PersistentFlags().Lookup(flagName)
+		flag := rootCmd.Flags().Lookup(flagName)
 		if flag == nil {
 			klog.Errorf("Could not find flag %s", flagName)
 			continue
@@ -98,6 +94,10 @@ func init() {
 			}
 		}
 	}
+	klog.InitFlags(nil)
+
+	// Add specific flags from klog package
+	pflag.CommandLine.AddGoFlag(flag.CommandLine.Lookup("v"))
 }
 
 // initConfig reads in config file and ENV variables if set.
