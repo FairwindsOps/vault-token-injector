@@ -16,12 +16,12 @@ limitations under the License.
 package cmd
 
 import (
-	goflag "flag"
+	"flag"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
-	flag "github.com/spf13/pflag"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"k8s.io/klog/v2"
 
@@ -70,9 +70,14 @@ func Execute(VERSION string, COMMIT string) {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is .vault-token-injector.yaml in the current directory)")
-	rootCmd.PersistentFlags().StringVar(&circleToken, "circle-token", "", "A circleci token.")
-	rootCmd.PersistentFlags().StringVar(&vaultTokenFile, "vault-token-file", "", "A file that contains a vault token. Optional - can set VAULT_TOKEN directly if preferred.")
+	klog.InitFlags(nil)
+	// Make cobra aware of select glog flags
+	// Enabling all flags causes unwanted deprecation warnings from glog to always print in plugin mode
+	pflag.CommandLine.AddGoFlag(flag.CommandLine.Lookup("v"))
+
+	rootCmd.Flags().StringVarP(&cfgFile, "config", "c", "", "config file (default is .vault-token-injector.yaml in the current directory)")
+	rootCmd.Flags().StringVar(&circleToken, "circle-token", "", "A circleci token.")
+	rootCmd.Flags().StringVar(&vaultTokenFile, "vault-token-file", "", "A file that contains a vault token. Optional - can set VAULT_TOKEN directly if preferred.")
 
 	envMap := map[string]string{
 		"CIRCLE_CI_TOKEN":  "circle-token",
@@ -93,10 +98,6 @@ func init() {
 			}
 		}
 	}
-
-	klog.InitFlags(nil)
-	goflag.Parse()
-	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 }
 
 // initConfig reads in config file and ENV variables if set.
