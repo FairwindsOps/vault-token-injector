@@ -27,8 +27,9 @@ import (
 )
 
 var (
-	cfgFile     string
-	circleToken string
+	cfgFile        string
+	circleToken    string
+	vaultTokenFile string
 )
 
 var rootCmd = &cobra.Command{
@@ -46,6 +47,17 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	if vaultTokenFile != "" {
+		tokenData, err := os.ReadFile(vaultTokenFile)
+		if err != nil {
+			return fmt.Errorf("vault-token-file is set but could not be opened: %s", err.Error())
+		}
+		if err := os.Setenv("VAULT_TOKEN", string(tokenData)); err != nil {
+			return fmt.Errorf("could not set VAULT_TOKEN from file: %s", err.Error())
+		}
+	}
+
 	return app.Run()
 }
 
@@ -68,9 +80,11 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is .vault-token-injector.yaml in the current directory)")
 	rootCmd.PersistentFlags().StringVar(&circleToken, "circle-token", "", "A circleci token.")
+	rootCmd.PersistentFlags().StringVar(&vaultTokenFile, "vault-token-file", "", "A file that contains a vault token. Optional - can set VAULT_TOKEN directly if preferred.")
 
 	envMap := map[string]string{
-		"CIRCLE_CI_TOKEN": "circle-token",
+		"CIRCLE_CI_TOKEN":  "circle-token",
+		"VAULT_TOKEN_FILE": "vault-token-file",
 	}
 
 	for env, flagName := range envMap {
