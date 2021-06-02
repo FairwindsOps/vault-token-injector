@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -90,7 +91,8 @@ func (a *App) refreshVaultTokenFromFile() error {
 		if err != nil {
 			return fmt.Errorf("vault-token-file is set but could not be opened: %s", err.Error())
 		}
-		if err := os.Setenv("VAULT_TOKEN", string(tokenData)); err != nil {
+		token := strings.TrimSpace(string(tokenData))
+		if err := os.Setenv("VAULT_TOKEN", token); err != nil {
 			return fmt.Errorf("could not set VAULT_TOKEN from file: %s", err.Error())
 		}
 	}
