@@ -71,8 +71,8 @@ func Execute(VERSION string, COMMIT string) {
 func init() {
 	cobra.OnInitialize(initConfig)
 	klog.InitFlags(nil)
-	// Make cobra aware of select glog flags
-	// Enabling all flags causes unwanted deprecation warnings from glog to always print in plugin mode
+
+	// Add specific flags from klog package
 	pflag.CommandLine.AddGoFlag(flag.CommandLine.Lookup("v"))
 
 	rootCmd.Flags().StringVarP(&cfgFile, "config", "c", "", "config file (default is .vault-token-injector.yaml in the current directory)")
