@@ -16,12 +16,12 @@ limitations under the License.
 package cmd
 
 import (
-	"flag"
+	goflag "flag"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
+	flag "github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"k8s.io/klog/v2"
 
@@ -95,8 +95,8 @@ func init() {
 	}
 
 	klog.InitFlags(nil)
-	flag.Parse()
-	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	goflag.Parse()
+	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 }
 
 // initConfig reads in config file and ENV variables if set.
