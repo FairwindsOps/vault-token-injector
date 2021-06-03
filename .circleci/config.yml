@@ -56,7 +56,9 @@ jobs:
           password-variable: FAIRWINDS_QUAY_TOKEN
       - run:
           name: Goreleaser
-          command: goreleaser
+          command: |
+            source ${BASH_ENV}
+            goreleaser
   snapshot:
     docker:
       - image: quay.io/reactiveops/ci-images:v11-buster
