@@ -1,8 +1,10 @@
 package app
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -13,8 +15,9 @@ import (
 )
 
 type App struct {
-	Config      *Config
-	CircleToken string
+	Config         *Config
+	CircleToken    string
+	VaultTokenFile string
 }
 
 // Config represents the top level our applications config yaml file
@@ -31,10 +34,11 @@ type CircleCIConfig struct {
 	EnvVar    string `mapstructure:"env_variable"`
 }
 
-func NewApp(circleToken string) *App {
+func NewApp(circleToken string, vaultTokenFile string) *App {
 	return &App{
-		Config:      new(Config),
-		CircleToken: circleToken,
+		Config:         new(Config),
+		CircleToken:    circleToken,
+		VaultTokenFile: vaultTokenFile,
 	}
 }
 
@@ -49,6 +53,9 @@ func (a *App) Run() error {
 
 	klog.Info("starting main application loop")
 	for {
+		if err := a.refreshVaultTokenFromFile(); err != nil {
+			klog.Error(err)
+		}
 		err := a.updateCircleCI()
 		if err != nil {
 			klog.Error(err)
@@ -73,7 +80,21 @@ func (a *App) updateCircleCI() error {
 		if err := circleci.UpdateEnvVar(projName, "VAULT_ADDR", a.Config.VaultAddress, a.CircleToken); err != nil {
 			return err
 		}
+	}
+	return nil
+}
 
+func (a *App) refreshVaultTokenFromFile() error {
+	if a.VaultTokenFile != "" {
+		klog.V(3).Infof("attempting to refresh token from file")
+		tokenData, err := os.ReadFile(a.VaultTokenFile)
+		if err != nil {
+			return fmt.Errorf("vault-token-file is set but could not be opened: %s", err.Error())
+		}
+		token := strings.TrimSpace(string(tokenData))
+		if err := os.Setenv("VAULT_TOKEN", token); err != nil {
+			return fmt.Errorf("could not set VAULT_TOKEN from file: %s", err.Error())
+		}
 	}
 	return nil
 }

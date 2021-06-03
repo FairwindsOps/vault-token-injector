@@ -16,10 +16,12 @@ limitations under the License.
 package cmd
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"k8s.io/klog/v2"
 
@@ -27,8 +29,9 @@ import (
 )
 
 var (
-	cfgFile     string
-	circleToken string
+	cfgFile        string
+	circleToken    string
+	vaultTokenFile string
 )
 
 var rootCmd = &cobra.Command{
@@ -41,11 +44,12 @@ and populate that token into environment variables used by other tools such as C
 }
 
 func run(cmd *cobra.Command, args []string) error {
-	app := app.NewApp(circleToken)
+	app := app.NewApp(circleToken, vaultTokenFile)
 	err := viper.Unmarshal(app.Config)
 	if err != nil {
 		return err
 	}
+
 	return app.Run()
 }
 
@@ -66,15 +70,18 @@ func Execute(VERSION string, COMMIT string) {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is .vault-token-injector.yaml in the current directory)")
-	rootCmd.PersistentFlags().StringVar(&circleToken, "circle-token", "", "A circleci token.")
+
+	rootCmd.Flags().StringVarP(&cfgFile, "config", "c", "", "config file (default is .vault-token-injector.yaml in the current directory)")
+	rootCmd.Flags().StringVar(&circleToken, "circle-token", "", "A circleci token.")
+	rootCmd.Flags().StringVar(&vaultTokenFile, "vault-token-file", "", "A file that contains a vault token. Optional - can set VAULT_TOKEN directly if preferred.")
 
 	envMap := map[string]string{
-		"CIRCLE_CI_TOKEN": "circle-token",
+		"CIRCLE_CI_TOKEN":  "circle-token",
+		"VAULT_TOKEN_FILE": "vault-token-file",
 	}
 
 	for env, flagName := range envMap {
-		flag := rootCmd.PersistentFlags().Lookup(flagName)
+		flag := rootCmd.Flags().Lookup(flagName)
 		if flag == nil {
 			klog.Errorf("Could not find flag %s", flagName)
 			continue
@@ -87,8 +94,10 @@ func init() {
 			}
 		}
 	}
-
 	klog.InitFlags(nil)
+
+	// Add specific flags from klog package
+	pflag.CommandLine.AddGoFlag(flag.CommandLine.Lookup("v"))
 }
 
 // initConfig reads in config file and ENV variables if set.
