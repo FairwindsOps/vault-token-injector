@@ -45,7 +45,7 @@ and populate that token into environment variables used by other tools such as C
 }
 
 func run(cmd *cobra.Command, args []string) error {
-	app := app.NewApp(circleToken, vaultTokenFile)
+	app := app.NewApp(circleToken, vaultTokenFile, tfCloudToken)
 	err := viper.Unmarshal(app.Config)
 	if err != nil {
 		return err

@@ -8,17 +8,16 @@ import (
 )
 
 type Variable struct {
-	Workspace    string
-	Key          string
-	Value        string
-	Token        string
-	Organization string
-	Sensitive    bool
+	Workspace string
+	Key       string
+	Value     string
+	Token     string
+	Sensitive bool
 }
 
 // Update will update a variable in TFCloud.
 func (v Variable) Update() error {
-	klog.Infof("setting env var %s in TFCloud Org: %s Workspace: %s", v.Key, v.Organization, v.Workspace)
+	klog.Infof("setting env var %s in TFCloud workspace %s", v.Key, v.Workspace)
 	config := &tfe.Config{
 		Token: v.Token,
 	}
@@ -29,12 +28,14 @@ func (v Variable) Update() error {
 	}
 	ctx := context.Background()
 
+	category := tfe.CategoryEnv
 	description := "Auto-Injected by vault-token-injector"
 	_, err = client.Variables.Create(ctx, v.Workspace, tfe.VariableCreateOptions{
 		Key:         &v.Key,
 		Value:       &v.Value,
 		Description: &description,
 		Sensitive:   &v.Sensitive,
+		Category:    &category,
 	})
 
 	return err

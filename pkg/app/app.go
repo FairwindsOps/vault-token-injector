@@ -40,15 +40,16 @@ type CircleCIConfig struct {
 // TFCloudConfig represents a specific instance of a TFCloud workspace we want to
 // update an environment variable for
 type TFCloudConfig struct {
-	Name      string `mapstructure:"name"`
+	Workspace string `mapstructure:"workspace"`
 	VaultRole string `mapstructure:"vault_role"`
 	EnvVar    string `mapstructure:"env_variable"`
 }
 
-func NewApp(circleToken string, vaultTokenFile string) *App {
+func NewApp(circleToken, vaultTokenFile, tfCloudToken string) *App {
 	return &App{
 		Config:         new(Config),
 		CircleToken:    circleToken,
+		TFCloudToken:   tfCloudToken,
 		VaultTokenFile: vaultTokenFile,
 	}
 }
@@ -98,18 +99,18 @@ func (a *App) updateCircleCI() error {
 }
 
 func (a *App) updateTFCloud() error {
-	for _, workspace := range a.Config.TFCloud {
-		token, err := vault.CreateToken(workspace.VaultRole)
+	for _, instance := range a.Config.TFCloud {
+		token, err := vault.CreateToken(instance.VaultRole)
 		if err != nil {
 			klog.Error(err)
 		}
-		klog.Infof("setting env var %s to vault token value", workspace.EnvVar)
+		klog.Infof("setting env var %s to vault token value", instance.EnvVar)
 		tokenVar := tfcloud.Variable{
-			Key:       workspace.EnvVar,
+			Key:       instance.EnvVar,
 			Value:     token.Auth.ClientToken,
 			Token:     a.TFCloudToken,
 			Sensitive: true,
-			Workspace: workspace.Name,
+			Workspace: instance.Workspace,
 		}
 		if err := tokenVar.Update(); err != nil {
 			return err
@@ -119,7 +120,7 @@ func (a *App) updateTFCloud() error {
 			Value:     a.Config.VaultAddress,
 			Sensitive: false,
 			Token:     a.TFCloudToken,
-			Workspace: workspace.Name,
+			Workspace: instance.Workspace,
 		}
 		if err := addressVar.Update(); err != nil {
 			return err
