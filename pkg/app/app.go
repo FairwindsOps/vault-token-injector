@@ -27,7 +27,7 @@ type Config struct {
 	CircleCI      []CircleCIConfig `mapstructure:"circleci"`
 	TFCloud       []TFCloudConfig  `mapstructure:"tfcloud"`
 	VaultAddress  string           `mapstructure:"vault_address"`
-	TokenVariable string           `mapstruture:"token_variable"`
+	TokenVariable string           `mapstructure:"token_variable"`
 }
 
 // CircleCIConfig represents a specific instance of a CircleCI project we want to
@@ -44,13 +44,31 @@ type TFCloudConfig struct {
 	VaultRole string `mapstructure:"vault_role"`
 }
 
-func NewApp(circleToken, vaultTokenFile, tfCloudToken string) *App {
-	return &App{
-		Config:         new(Config),
+func NewApp(circleToken, vaultTokenFile, tfCloudToken string, config *Config) *App {
+	app := &App{
+		Config:         config,
 		CircleToken:    circleToken,
 		TFCloudToken:   tfCloudToken,
 		VaultTokenFile: vaultTokenFile,
 	}
+	if len(app.Config.CircleCI) > 0 && circleToken == "" {
+		klog.Warning("CircleCI is configured but no token was provided.")
+	}
+
+	if len(app.Config.TFCloud) > 0 && tfCloudToken == "" {
+		klog.Warning("TFCloud is configured but no token was provided.")
+	}
+	if app.Config.TokenVariable == "" {
+		app.Config.TokenVariable = "VAULT_TOKEN"
+		klog.Warningf("token variable not set, defaulting to %s", app.Config.TokenVariable)
+	}
+
+	klog.V(4).Infof("Token Variable: %s", app.Config.TokenVariable)
+	klog.V(4).Infof("Vault Address: %s", app.Config.VaultAddress)
+	klog.V(4).Infof("Circle Configs: %v", app.Config.CircleCI)
+	klog.V(4).Infof("TFCloud Configs: %v", app.Config.TFCloud)
+
+	return app
 }
 
 func (a *App) Run() error {

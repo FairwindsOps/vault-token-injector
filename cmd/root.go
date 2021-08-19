@@ -39,26 +39,19 @@ var rootCmd = &cobra.Command{
 	Use:   "vault-token-injector",
 	Short: "Inject vault tokens into other things",
 	Long: `vault-token-injector will generate a new vault token given a vault role
-and populate that token into environment variables used by other tools such as CircleCI`,
-	PreRunE: validateArgs,
-	RunE:    run,
+and populate that token into environment variables used by other tools such as CircleCI or Terraform Cloud`,
+	RunE: run,
 }
 
 func run(cmd *cobra.Command, args []string) error {
-	app := app.NewApp(circleToken, vaultTokenFile, tfCloudToken)
-	err := viper.Unmarshal(app.Config)
+	config := &app.Config{}
+	err := viper.Unmarshal(config)
 	if err != nil {
 		return err
 	}
+	app := app.NewApp(circleToken, vaultTokenFile, tfCloudToken, config)
 
 	return app.Run()
-}
-
-func validateArgs(cmd *cobra.Command, args []string) error {
-	if circleToken == "" {
-		return fmt.Errorf("you must set CIRCLE_CI_TOKEN or pass --circle-token")
-	}
-	return nil
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
