@@ -1,8 +1,9 @@
 package app
 
 import (
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewApp(t *testing.T) {
@@ -10,6 +11,7 @@ func TestNewApp(t *testing.T) {
 		circleToken    string
 		vaultTokenFile string
 		tfCloudToken   string
+		config         *Config
 	}
 	tests := []struct {
 		name string
@@ -22,20 +24,41 @@ func TestNewApp(t *testing.T) {
 				circleToken:    "foo",
 				vaultTokenFile: "",
 				tfCloudToken:   "farglebargle",
+				config:         &Config{},
 			},
 			want: &App{
 				CircleToken:    "foo",
 				VaultTokenFile: "",
 				TFCloudToken:   "farglebargle",
-				Config:         &Config{},
+				Config: &Config{
+					TokenVariable: "VAULT_TOKEN",
+				},
+			},
+		},
+		{
+			name: "override token variable",
+			args: args{
+				circleToken:    "foo",
+				vaultTokenFile: "",
+				tfCloudToken:   "farglebargle",
+				config: &Config{
+					TokenVariable: "FOO",
+				},
+			},
+			want: &App{
+				CircleToken:    "foo",
+				VaultTokenFile: "",
+				TFCloudToken:   "farglebargle",
+				Config: &Config{
+					TokenVariable: "FOO",
+				},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewApp(tt.args.circleToken, tt.args.vaultTokenFile, tt.args.tfCloudToken, &Config{}); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewApp() = %v, want %v", got, tt.want)
-			}
+			got := NewApp(tt.args.circleToken, tt.args.vaultTokenFile, tt.args.tfCloudToken, tt.args.config)
+			assert.EqualValues(t, tt.want, got)
 		})
 	}
 }
