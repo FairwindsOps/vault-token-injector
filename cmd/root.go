@@ -31,6 +31,7 @@ import (
 var (
 	cfgFile        string
 	circleToken    string
+	tfCloudToken   string
 	vaultTokenFile string
 )
 
@@ -73,10 +74,12 @@ func init() {
 
 	rootCmd.Flags().StringVarP(&cfgFile, "config", "c", "", "config file (default is .vault-token-injector.yaml in the current directory)")
 	rootCmd.Flags().StringVar(&circleToken, "circle-token", "", "A circleci token.")
+	rootCmd.Flags().StringVar(&tfCloudToken, "tfcloud-token", "", "A token for TFCloud access.")
 	rootCmd.Flags().StringVar(&vaultTokenFile, "vault-token-file", "", "A file that contains a vault token. Optional - can set VAULT_TOKEN directly if preferred.")
 
 	envMap := map[string]string{
 		"CIRCLE_CI_TOKEN":  "circle-token",
+		"TFCLOUD_TOKEN":    "tfcloud-token",
 		"VAULT_TOKEN_FILE": "vault-token-file",
 	}
 
