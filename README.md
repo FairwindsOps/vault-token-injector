@@ -16,9 +16,9 @@
 
 # vault-token-injector
 
-A loop to keep vault access tokens up-to-date in circleci
+A loop to keep vault access tokens up-to-date in circleci and/or terraform cloud
 
-Injects new tokens into circleci build environments on startup and every 30 minutes. Also injects the `VAULT_ADDR` variable.
+Injects new tokens into circleci build environments or terraform cloud workspaces on startup and every 30 minutes. Also injects the `VAULT_ADDR` variable.
 
 # Configuration
 

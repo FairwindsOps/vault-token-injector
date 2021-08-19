@@ -1,5 +1,8 @@
-vault-address: "https://vault.example.com"
+vault_address: "https://vault.example.com"
+token_variable: VAULT_TOKEN
 circleci:
 - name: FairwindsOps/vault-token-injector
   vault_role: repo-vault-token-injector
-  env_variable: VAULT_TOKEN
+tfcloud:
+- workspace: SomeWorkspaceID
+  vault_role: some-vault-role
