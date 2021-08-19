@@ -5,6 +5,15 @@ orbs:
   rok8s: fairwinds/rok8s-scripts@11
 
 references:
+  install_vault: &install_vault
+    run:
+      name: install hashicorp vault
+      command: |
+        cd /tmp
+        curl -LO https://releases.hashicorp.com/vault/1.8.1/vault_1.8.1_linux_amd64.zip
+        unzip vault_1.8.1_linux_amd64.zip
+        mv vault /usr/bin/vault
+        apk --update add yq
 jobs:
   test:
     working_directory: /go/src/github.com/fairwindsops/vault-token-injector
@@ -28,9 +37,10 @@ jobs:
           path: /tmp/test_results
   release:
     docker:
-      - image: goreleaser/goreleaser:v0.174.2 
+      - image: goreleaser/goreleaser:v0.174.2
     steps:
       - checkout
+      - *install_vault
       - rok8s/get_vault_env:
           vault_path: repo/global/env
       - setup_remote_docker
