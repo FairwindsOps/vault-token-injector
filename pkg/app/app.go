@@ -104,10 +104,24 @@ func (a *App) updateTFCloud() error {
 			klog.Error(err)
 		}
 		klog.Infof("setting env var %s to vault token value", workspace.EnvVar)
-		if err := tfcloud.UpdateEnvVar(workspace.Name, workspace.EnvVar, token.Auth.ClientToken, a.TFCloudToken, true); err != nil {
+		tokenVar := tfcloud.Variable{
+			Key:       workspace.EnvVar,
+			Value:     token.Auth.ClientToken,
+			Token:     a.TFCloudToken,
+			Sensitive: true,
+			Workspace: workspace.Name,
+		}
+		if err := tokenVar.Update(); err != nil {
 			return err
 		}
-		if err := tfcloud.UpdateEnvVar(workspace.Name, "VAULT_ADDR", a.Config.VaultAddress, a.TFCloudToken, false); err != nil {
+		addressVar := tfcloud.Variable{
+			Key:       "VAULT_ADDR",
+			Value:     a.Config.VaultAddress,
+			Sensitive: false,
+			Token:     a.TFCloudToken,
+			Workspace: workspace.Name,
+		}
+		if err := addressVar.Update(); err != nil {
 			return err
 		}
 	}
