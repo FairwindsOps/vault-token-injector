@@ -22,13 +22,12 @@ Injects new tokens into circleci build environments or terraform cloud workspace
 
 # Configuration
 
-An example configuration file is present [here](example_config.yaml). Whatever circleci projects are mentioned will update the given `env_variable` in the project workspace. The vault token for that project is created with the provided `vault_role`. In addition, the `vault-address` field is injected as the `VAULT_ADDR` enironment variable.
+An example configuration file is present [here](example_config.yaml). Whatever circleci projects or terraform cloud workspaces are mentioned will update the given `token_variable` in the project workspace. The vault token for that project is created with the provided `vault_role`. In addition, the `vault_address` field is injected as the `VAULT_ADDR` environment variable.
 
 ## Future Planned Enhancements
 
-* Support for Terraform Cloud in addition to CirlceCI
 * Customizable Timing (not hard-coded to 30m)
 * Staggered token injections
 * Disable `VAULT_ADDR` injection
 * Use Vault API instead of vault binary
-* Prometheus endpoint to bubble up errors and sucesses
+* Prometheus endpoint to bubble up errors and successes
