@@ -11,6 +11,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/fairwindsops/vault-token-injector/pkg/circleci"
+	"github.com/fairwindsops/vault-token-injector/pkg/tfcloud"
 	"github.com/fairwindsops/vault-token-injector/pkg/vault"
 )
 
@@ -18,17 +19,27 @@ type App struct {
 	Config         *Config
 	CircleToken    string
 	VaultTokenFile string
+	TFCloudToken   string
 }
 
 // Config represents the top level our applications config yaml file
 type Config struct {
 	CircleCI     []CircleCIConfig `mapstructure:"circleci"`
+	TFCloud      []TFCloudConfig  `mapstructure:"tfcloud"`
 	VaultAddress string           `mapstructure:"vault-address"`
 }
 
 // CircleCIConfig represents a specific instance of a CircleCI project we want to
 // update an environment variable for
 type CircleCIConfig struct {
+	Name      string `mapstructure:"name"`
+	VaultRole string `mapstructure:"vault_role"`
+	EnvVar    string `mapstructure:"env_variable"`
+}
+
+// TFCloudConfig represents a specific instance of a TFCloud workspace we want to
+// update an environment variable for
+type TFCloudConfig struct {
 	Name      string `mapstructure:"name"`
 	VaultRole string `mapstructure:"vault_role"`
 	EnvVar    string `mapstructure:"env_variable"`
@@ -56,8 +67,10 @@ func (a *App) Run() error {
 		if err := a.refreshVaultTokenFromFile(); err != nil {
 			klog.Error(err)
 		}
-		err := a.updateCircleCI()
-		if err != nil {
+		if err := a.updateCircleCI(); err != nil {
+			klog.Error(err)
+		}
+		if err := a.updateTFCloud(); err != nil {
 			klog.Error(err)
 		}
 		time.Sleep(30 * time.Minute)
@@ -78,6 +91,23 @@ func (a *App) updateCircleCI() error {
 			return err
 		}
 		if err := circleci.UpdateEnvVar(projName, "VAULT_ADDR", a.Config.VaultAddress, a.CircleToken); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (a *App) updateTFCloud() error {
+	for _, workspace := range a.Config.TFCloud {
+		token, err := vault.CreateToken(workspace.VaultRole)
+		if err != nil {
+			klog.Error(err)
+		}
+		klog.Infof("setting env var %s to vault token value", workspace.EnvVar)
+		if err := tfcloud.UpdateEnvVar(workspace.Name, workspace.EnvVar, token.Auth.ClientToken, a.TFCloudToken, true); err != nil {
+			return err
+		}
+		if err := tfcloud.UpdateEnvVar(workspace.Name, "VAULT_ADDR", a.Config.VaultAddress, a.TFCloudToken, false); err != nil {
 			return err
 		}
 	}
