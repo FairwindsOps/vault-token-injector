@@ -50,7 +50,6 @@ jobs:
       - run:
           name: Goreleaser
           command: |
-            source ${BASH_ENV}
             goreleaser
   snapshot:
     docker:
