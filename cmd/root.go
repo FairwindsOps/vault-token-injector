@@ -31,6 +31,7 @@ import (
 var (
 	cfgFile        string
 	circleToken    string
+	tfCloudToken   string
 	vaultTokenFile string
 )
 
@@ -38,26 +39,19 @@ var rootCmd = &cobra.Command{
 	Use:   "vault-token-injector",
 	Short: "Inject vault tokens into other things",
 	Long: `vault-token-injector will generate a new vault token given a vault role
-and populate that token into environment variables used by other tools such as CircleCI`,
-	PreRunE: validateArgs,
-	RunE:    run,
+and populate that token into environment variables used by other tools such as CircleCI or Terraform Cloud`,
+	RunE: run,
 }
 
 func run(cmd *cobra.Command, args []string) error {
-	app := app.NewApp(circleToken, vaultTokenFile)
-	err := viper.Unmarshal(app.Config)
+	config := &app.Config{}
+	err := viper.Unmarshal(config)
 	if err != nil {
 		return err
 	}
+	app := app.NewApp(circleToken, vaultTokenFile, tfCloudToken, config)
 
 	return app.Run()
-}
-
-func validateArgs(cmd *cobra.Command, args []string) error {
-	if circleToken == "" {
-		return fmt.Errorf("you must set CIRCLE_CI_TOKEN or pass --circle-token")
-	}
-	return nil
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -73,10 +67,12 @@ func init() {
 
 	rootCmd.Flags().StringVarP(&cfgFile, "config", "c", "", "config file (default is .vault-token-injector.yaml in the current directory)")
 	rootCmd.Flags().StringVar(&circleToken, "circle-token", "", "A circleci token.")
+	rootCmd.Flags().StringVar(&tfCloudToken, "tfcloud-token", "", "A token for TFCloud access.")
 	rootCmd.Flags().StringVar(&vaultTokenFile, "vault-token-file", "", "A file that contains a vault token. Optional - can set VAULT_TOKEN directly if preferred.")
 
 	envMap := map[string]string{
 		"CIRCLE_CI_TOKEN":  "circle-token",
+		"TFCLOUD_TOKEN":    "tfcloud-token",
 		"VAULT_TOKEN_FILE": "vault-token-file",
 	}
 
