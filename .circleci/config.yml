@@ -49,8 +49,8 @@ jobs:
           password-variable: FAIRWINDS_QUAY_TOKEN
       - run:
           name: Goreleaser
+          shell: bash
           command: |
-            env
             goreleaser
   snapshot:
     docker:
