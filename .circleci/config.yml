@@ -38,6 +38,7 @@ jobs:
   release:
     docker:
       - image: goreleaser/goreleaser:v0.174.2
+    resource_class: large
     steps:
       - checkout
       - *install_vault
@@ -51,6 +52,10 @@ jobs:
           name: Goreleaser
           shell: bash
           command: |
+            set -x
+            echo $BASH_ENV
+            source $BASH_ENV
+            env
             goreleaser
   snapshot:
     docker:
