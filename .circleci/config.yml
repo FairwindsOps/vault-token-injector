@@ -2,7 +2,7 @@
 version: 2.1
 
 orbs:
-  rok8s: fairwinds/rok8s-scripts@dev:sudermanjr/fix-get-vault-env
+  rok8s: fairwinds/rok8s-scripts@11
 
 references:
   install_vault: &install_vault
