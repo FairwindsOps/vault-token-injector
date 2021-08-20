@@ -2,7 +2,7 @@
 version: 2.1
 
 orbs:
-  rok8s: fairwinds/rok8s-scripts@11
+  rok8s: fairwinds/rok8s-scripts@dev:sudermanjr/fix-get-vault-env
 
 references:
   install_vault: &install_vault
@@ -52,7 +52,6 @@ jobs:
       - run:
           name: Goreleaser
           command: |
-            source $BASH_ENV
             goreleaser
   snapshot:
     docker:
