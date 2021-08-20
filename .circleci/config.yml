@@ -39,6 +39,9 @@ jobs:
     docker:
       - image: goreleaser/goreleaser:v0.174.2
     resource_class: large
+    shell: /bin/sh -leo pipefail
+    environment:
+      - BASH_ENV: /etc/profile
     steps:
       - checkout
       - *install_vault
@@ -50,11 +53,7 @@ jobs:
           password-variable: FAIRWINDS_QUAY_TOKEN
       - run:
           name: Goreleaser
-          shell: bash
           command: |
-            set -x
-            echo $BASH_ENV
-            source $BASH_ENV
             env
             goreleaser
   snapshot:
