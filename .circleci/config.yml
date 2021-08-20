@@ -39,9 +39,7 @@ jobs:
     docker:
       - image: goreleaser/goreleaser:v0.174.2
     resource_class: large
-    shell: /bin/sh -leo pipefail
-    environment:
-      - BASH_ENV: /etc/profile
+    shell: /bin/bash
     steps:
       - checkout
       - *install_vault
@@ -54,9 +52,6 @@ jobs:
       - run:
           name: Goreleaser
           command: |
-            echo $BASH_ENV
-            source $BASH_ENV
-            env
             goreleaser
   snapshot:
     docker:
