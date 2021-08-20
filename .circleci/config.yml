@@ -54,6 +54,7 @@ jobs:
       - run:
           name: Goreleaser
           command: |
+            echo $BASH_ENV
             source $BASH_ENV
             env
             goreleaser
