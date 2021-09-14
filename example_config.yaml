@@ -5,4 +5,6 @@ circleci:
   vault_role: repo-vault-token-injector
 tfcloud:
 - workspace: SomeWorkspaceID
-  vault_role: some-vault-role
+  vault_policies:
+    - policy-a
+    - policy-b
