@@ -24,10 +24,12 @@ type App struct {
 
 // Config represents the top level our applications config yaml file
 type Config struct {
-	CircleCI      []CircleCIConfig `mapstructure:"circleci"`
-	TFCloud       []TFCloudConfig  `mapstructure:"tfcloud"`
-	VaultAddress  string           `mapstructure:"vault_address"`
-	TokenVariable string           `mapstructure:"token_variable"`
+	CircleCI             []CircleCIConfig `mapstructure:"circleci"`
+	TFCloud              []TFCloudConfig  `mapstructure:"tfcloud"`
+	VaultAddress         string           `mapstructure:"vault_address"`
+	TokenVariable        string           `mapstructure:"token_variable"`
+	TokenTTL             time.Duration    `mapstructure:"token_ttl"`
+	TokenRefreshInterval time.Duration    `mapstructure:"token_refresh_interval"`
 }
 
 // CircleCIConfig represents a specific instance of a CircleCI project we want to
@@ -65,10 +67,22 @@ func NewApp(circleToken, vaultTokenFile, tfCloudToken string, config *Config) *A
 		klog.Warningf("token variable not set, defaulting to %s", app.Config.TokenVariable)
 	}
 
-	klog.V(4).Infof("Token Variable: %s", app.Config.TokenVariable)
-	klog.V(4).Infof("Vault Address: %s", app.Config.VaultAddress)
-	klog.V(4).Infof("Circle Configs: %v", app.Config.CircleCI)
-	klog.V(4).Infof("TFCloud Configs: %v", app.Config.TFCloud)
+	if app.Config.TokenTTL == 0 {
+		app.Config.TokenTTL = time.Minute * 60
+		klog.V(4).Infof("token TTL not set, defaulting to %s", app.Config.TokenTTL.String())
+	}
+
+	if app.Config.TokenRefreshInterval == 0 {
+		app.Config.TokenRefreshInterval = time.Minute * 30
+		klog.V(3).Infof("token refresh interval not set, defaulting to %s", app.Config.TokenRefreshInterval.String())
+	}
+
+	klog.V(3).Infof("Token Variable: %s", app.Config.TokenVariable)
+	klog.V(3).Infof("Token TTL: %s", app.Config.TokenTTL.String())
+	klog.V(3).Infof("Token Refresh Interval: %s", app.Config.TokenRefreshInterval.String())
+	klog.V(3).Infof("Vault Address: %s", app.Config.VaultAddress)
+	klog.V(3).Infof("Circle Configs: %v", app.Config.CircleCI)
+	klog.V(3).Infof("TFCloud Configs: %v", app.Config.TFCloud)
 
 	return app
 }
@@ -93,7 +107,7 @@ func (a *App) Run() error {
 		if err := a.updateTFCloud(); err != nil {
 			klog.Error(err)
 		}
-		time.Sleep(30 * time.Minute)
+		time.Sleep(a.Config.TokenRefreshInterval)
 	}
 }
 
@@ -101,7 +115,7 @@ func (a *App) updateCircleCI() error {
 	for _, project := range a.Config.CircleCI {
 		projName := project.Name
 		projVariableName := a.Config.TokenVariable
-		token, err := vault.CreateToken(project.VaultRole, project.VaultPolicies)
+		token, err := vault.CreateToken(project.VaultRole, project.VaultPolicies, a.Config.TokenTTL)
 		if err != nil {
 			return err
 		}
@@ -118,7 +132,7 @@ func (a *App) updateCircleCI() error {
 
 func (a *App) updateTFCloud() error {
 	for _, instance := range a.Config.TFCloud {
-		token, err := vault.CreateToken(instance.VaultRole, instance.VaultPolicies)
+		token, err := vault.CreateToken(instance.VaultRole, instance.VaultPolicies, a.Config.TokenTTL)
 		if err != nil {
 			return err
 		}
