@@ -33,15 +33,17 @@ type Config struct {
 // CircleCIConfig represents a specific instance of a CircleCI project we want to
 // update an environment variable for
 type CircleCIConfig struct {
-	Name      string `mapstructure:"name"`
-	VaultRole string `mapstructure:"vault_role"`
+	Name          string   `mapstructure:"name"`
+	VaultRole     *string  `mapstructure:"vault_role"`
+	VaultPolicies []string `mapstructure:"vault_policies"`
 }
 
 // TFCloudConfig represents a specific instance of a TFCloud workspace we want to
 // update an environment variable for
 type TFCloudConfig struct {
-	Workspace string `mapstructure:"workspace"`
-	VaultRole string `mapstructure:"vault_role"`
+	Workspace     string   `mapstructure:"workspace"`
+	VaultRole     *string  `mapstructure:"vault_role"`
+	VaultPolicies []string `mapstructure:"vault_policies"`
 }
 
 func NewApp(circleToken, vaultTokenFile, tfCloudToken string, config *Config) *App {
@@ -99,8 +101,7 @@ func (a *App) updateCircleCI() error {
 	for _, project := range a.Config.CircleCI {
 		projName := project.Name
 		projVariableName := a.Config.TokenVariable
-		vaultRole := project.VaultRole
-		token, err := vault.CreateToken(vaultRole)
+		token, err := vault.CreateToken(project.VaultRole, project.VaultPolicies)
 		if err != nil {
 			return err
 		}
@@ -117,9 +118,9 @@ func (a *App) updateCircleCI() error {
 
 func (a *App) updateTFCloud() error {
 	for _, instance := range a.Config.TFCloud {
-		token, err := vault.CreateToken(instance.VaultRole)
+		token, err := vault.CreateToken(instance.VaultRole, instance.VaultPolicies)
 		if err != nil {
-			klog.Error(err)
+			return err
 		}
 		klog.Infof("setting env var %s to vault token value", a.Config.TokenVariable)
 		tokenVar := tfcloud.Variable{

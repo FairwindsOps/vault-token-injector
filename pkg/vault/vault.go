@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"k8s.io/klog/v2"
 )
 
 // Token represents a token structure in Vault
@@ -18,16 +20,30 @@ type Token struct {
 }
 
 // Creates a token using the provided role
-func CreateToken(role string) (*Token, error) {
-	output, _, err := execute("vault", "token", "create", fmt.Sprintf("-role=%s", role), "-format=json")
+func CreateToken(role *string, policies []string) (*Token, error) {
+
+	args := []string{"token", "create", "-format=json", "-orphan"}
+
+	if role != nil {
+		klog.V(5).Infof("adding token role %s", *role)
+		args = append(args, fmt.Sprintf("-role=%s", *role))
+	}
+
+	for _, policy := range policies {
+		klog.V(5).Infof("adding policy %s to token", policy)
+		args = append(args, fmt.Sprintf("-policy=%s", policy))
+	}
+
+	output, _, err := execute("vault", args...)
 	if err != nil {
-		return nil, fmt.Errorf("Error creating token: %s", err.Error())
+		return nil, fmt.Errorf("error creating token: %s", err.Error())
 	}
 	token := &Token{}
 	err = json.Unmarshal([]byte(output), token)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshaling vault token: %s", err.Error())
 	}
+	klog.V(10).Infof("created token: %s", token.Auth.ClientToken)
 	return token, nil
 }
 
