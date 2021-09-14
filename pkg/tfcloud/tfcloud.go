@@ -30,6 +30,32 @@ func (v Variable) Update() error {
 
 	category := tfe.CategoryEnv
 	description := "Auto-Injected by vault-token-injector"
+
+	tfvars, err := client.Variables.List(ctx, v.Workspace, tfe.VariableListOptions{
+		ListOptions: tfe.ListOptions{
+			PageNumber: 1,
+			PageSize:   1000,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	for _, tfvar := range tfvars.Items {
+		if tfvar.Key == v.Key {
+			klog.Infof("var %s already exists, updating instead", v.Key)
+
+			_, err = client.Variables.Update(ctx, v.Workspace, tfvar.ID, tfe.VariableUpdateOptions{
+				Description: &description,
+				Sensitive:   &v.Sensitive,
+				Value:       &v.Value,
+			})
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+	}
+
 	_, err = client.Variables.Create(ctx, v.Workspace, tfe.VariableCreateOptions{
 		Key:         &v.Key,
 		Value:       &v.Value,
