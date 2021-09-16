@@ -24,9 +24,19 @@ Injects new tokens into circleci build environments or terraform cloud workspace
 
 An example configuration file is present [here](example_config.yaml). Whatever circleci projects or terraform cloud workspaces are mentioned will update the given `token_variable` in the project workspace. The vault token for that project is created with the provided `vault_role` and/or `vault_policies`. In addition, the `vault_address` field is injected as the `VAULT_ADDR` environment variable.
 
+## Token TTL and Refresh Interval
+
+The default token TTL is 60 minutes, and the default refresh interval is 30 minutes. This allows some overlap intentionally. If you wish to customize these numbers, you can set the following in your configuration:
+
+```
+token_ttl: 10m
+token_refresh_interval: 1m
+```
+
+Note that the time intervals are golang time.Duration strings
+
 ## Future Planned Enhancements
 
-* Customizable Timing (not hard-coded to 30m)
 * Staggered token injections
 * Disable `VAULT_ADDR` injection
 * Use Vault API instead of vault binary

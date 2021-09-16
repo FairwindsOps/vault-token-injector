@@ -2,6 +2,7 @@ package app
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -31,7 +32,9 @@ func TestNewApp(t *testing.T) {
 				VaultTokenFile: "",
 				TFCloudToken:   "farglebargle",
 				Config: &Config{
-					TokenVariable: "VAULT_TOKEN",
+					TokenVariable:        "VAULT_TOKEN",
+					TokenTTL:             time.Minute * 60,
+					TokenRefreshInterval: time.Minute * 30,
 				},
 			},
 		},
@@ -50,7 +53,9 @@ func TestNewApp(t *testing.T) {
 				VaultTokenFile: "",
 				TFCloudToken:   "farglebargle",
 				Config: &Config{
-					TokenVariable: "FOO",
+					TokenVariable:        "FOO",
+					TokenTTL:             time.Minute * 60,
+					TokenRefreshInterval: time.Minute * 30,
 				},
 			},
 		},
