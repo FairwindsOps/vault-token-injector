@@ -117,14 +117,17 @@ func (a *App) updateCircleCI() error {
 		projVariableName := a.Config.TokenVariable
 		token, err := vault.CreateToken(project.VaultRole, project.VaultPolicies, a.Config.TokenTTL)
 		if err != nil {
-			return err
+			klog.Error(err)
+			continue
 		}
 		klog.Infof("setting env var %s to vault token value", projVariableName)
 		if err := circleci.UpdateEnvVar(projName, projVariableName, token.Auth.ClientToken, a.CircleToken); err != nil {
-			return err
+			klog.Error(err)
+			continue
 		}
 		if err := circleci.UpdateEnvVar(projName, "VAULT_ADDR", a.Config.VaultAddress, a.CircleToken); err != nil {
-			return err
+			klog.Error(err)
+			continue
 		}
 	}
 	return nil
@@ -134,7 +137,8 @@ func (a *App) updateTFCloud() error {
 	for _, instance := range a.Config.TFCloud {
 		token, err := vault.CreateToken(instance.VaultRole, instance.VaultPolicies, a.Config.TokenTTL)
 		if err != nil {
-			return err
+			klog.Error(err)
+			continue
 		}
 		klog.Infof("setting env var %s to vault token value", a.Config.TokenVariable)
 		tokenVar := tfcloud.Variable{
@@ -145,7 +149,8 @@ func (a *App) updateTFCloud() error {
 			Workspace: instance.Workspace,
 		}
 		if err := tokenVar.Update(); err != nil {
-			return err
+			klog.Error(err)
+			continue
 		}
 		addressVar := tfcloud.Variable{
 			Key:       "VAULT_ADDR",
@@ -155,7 +160,8 @@ func (a *App) updateTFCloud() error {
 			Workspace: instance.Workspace,
 		}
 		if err := addressVar.Update(); err != nil {
-			return err
+			klog.Error(err)
+			continue
 		}
 	}
 	return nil
