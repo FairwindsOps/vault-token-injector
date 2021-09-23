@@ -101,17 +101,13 @@ func (a *App) Run() error {
 		if err := a.refreshVaultTokenFromFile(); err != nil {
 			klog.Error(err)
 		}
-		if err := a.updateCircleCI(); err != nil {
-			klog.Error(err)
-		}
-		if err := a.updateTFCloud(); err != nil {
-			klog.Error(err)
-		}
+		a.updateCircleCI()
+		a.updateTFCloud()
 		time.Sleep(a.Config.TokenRefreshInterval)
 	}
 }
 
-func (a *App) updateCircleCI() error {
+func (a *App) updateCircleCI() {
 	for _, project := range a.Config.CircleCI {
 		projName := project.Name
 		projVariableName := a.Config.TokenVariable
@@ -130,10 +126,9 @@ func (a *App) updateCircleCI() error {
 			continue
 		}
 	}
-	return nil
 }
 
-func (a *App) updateTFCloud() error {
+func (a *App) updateTFCloud() {
 	for _, instance := range a.Config.TFCloud {
 		token, err := vault.CreateToken(instance.VaultRole, instance.VaultPolicies, a.Config.TokenTTL)
 		if err != nil {
@@ -164,7 +159,6 @@ func (a *App) updateTFCloud() error {
 			continue
 		}
 	}
-	return nil
 }
 
 func (a *App) refreshVaultTokenFromFile() error {
