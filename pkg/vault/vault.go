@@ -21,10 +21,10 @@ type Token struct {
 }
 
 // Creates a token using the provided role
-func CreateToken(role *string, policies []string, ttl time.Duration) (*Token, error) {
-
+func CreateToken(role *string, policies []string, ttl time.Duration, orphan bool) (*Token, error) {
 	ttlString := fmt.Sprintf("-ttl=%s", ttl.String())
-	args := []string{"token", "create", "-format=json", "-orphan", ttlString}
+	orphanString := fmt.Sprintf("-orphan=%t", orphan)
+	args := []string{"token", "create", "-format=json", orphanString, ttlString}
 
 	if role != nil {
 		klog.V(5).Infof("adding token role %s", *role)
