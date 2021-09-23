@@ -1,4 +1,4 @@
-FROM hashicorp/vault:1.7.1
+FROM alpine:3
 
 USER nobody
 COPY vault-token-injector /

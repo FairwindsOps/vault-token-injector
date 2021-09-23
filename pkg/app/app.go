@@ -21,6 +21,7 @@ type App struct {
 	Config         *Config
 	CircleToken    string
 	VaultTokenFile string
+	VaultClient    *vault.Client
 	TFCloudToken   string
 }
 
@@ -115,30 +116,31 @@ func (a *App) Run() error {
 	klog.Info("starting main application loop")
 	for {
 		if err := a.refreshVaultTokenFromFile(); err != nil {
-			klog.Error(err)
+			return err
 		}
-		a.updateCircleCI()
-		a.updateTFCloud()
+		var wg sync.WaitGroup
+		for _, workspace := range a.Config.TFCloud {
+
+			wg.Add(1)
+			go a.updateTFCloudInstance(workspace, &wg)
+		}
+		for _, project := range a.Config.CircleCI {
+			wg.Add(1)
+			go a.updateCircleCIInstance(project, &wg)
+		}
+		wg.Wait()
+
 		time.Sleep(a.Config.TokenRefreshInterval)
 	}
-}
-
-func (a *App) updateCircleCI() {
-	var wg sync.WaitGroup
-	for _, project := range a.Config.CircleCI {
-		wg.Add(1)
-		go a.updateCircleCIInstance(project, &wg)
-	}
-	wg.Wait()
 }
 
 func (a *App) updateCircleCIInstance(project CircleCIConfig, wg *sync.WaitGroup) {
 	defer wg.Done()
 	projName := project.Name
 	projVariableName := a.Config.TokenVariable
-	token, err := vault.CreateToken(project.VaultRole, project.VaultPolicies, a.Config.TokenTTL, a.Config.OrphanTokens)
+	token, err := a.VaultClient.CreateToken(project.VaultRole, project.VaultPolicies, a.Config.TokenTTL, a.Config.OrphanTokens)
 	if err != nil {
-		klog.Errorf("error making token for CircleCI project %s", projName, err)
+		klog.Errorf("error making token for CircleCI project %s: %s", projName, err.Error())
 		return
 	}
 	klog.Infof("setting env var %s to vault token value in CircleCI project %s", projVariableName, projName)
@@ -152,16 +154,6 @@ func (a *App) updateCircleCIInstance(project CircleCIConfig, wg *sync.WaitGroup)
 	}
 }
 
-func (a *App) updateTFCloud() {
-	var wg sync.WaitGroup
-	for _, instance := range a.Config.TFCloud {
-
-		wg.Add(1)
-		go a.updateTFCloudInstance(instance, &wg)
-	}
-	wg.Wait()
-}
-
 func (a *App) updateTFCloudInstance(instance TFCloudConfig, wg *sync.WaitGroup) {
 	defer wg.Done()
 	var workspaceLogIdentifier string
@@ -170,9 +162,9 @@ func (a *App) updateTFCloudInstance(instance TFCloudConfig, wg *sync.WaitGroup) 
 	} else {
 		workspaceLogIdentifier = instance.Workspace
 	}
-	token, err := vault.CreateToken(instance.VaultRole, instance.VaultPolicies, a.Config.TokenTTL, a.Config.OrphanTokens)
+	token, err := a.VaultClient.CreateToken(instance.VaultRole, instance.VaultPolicies, a.Config.TokenTTL, a.Config.OrphanTokens)
 	if err != nil {
-		klog.Errorf("error making token for TFCloud workspace %s: %s", workspaceLogIdentifier, err.Error())
+		klog.Errorf("error getting vault token for TFCloud workspace %s: %s", workspaceLogIdentifier, err.Error())
 		return
 	}
 	klog.Infof("setting env var %s to vault token value", a.Config.TokenVariable)
@@ -184,7 +176,7 @@ func (a *App) updateTFCloudInstance(instance TFCloudConfig, wg *sync.WaitGroup) 
 		Workspace: instance.Workspace,
 	}
 	if err := tokenVar.Update(); err != nil {
-		klog.Errorf("error update token for TFCloud workspace %s: %s", workspaceLogIdentifier, err.Error())
+		klog.Errorf("error updating token for TFCloud workspace %s: %s", workspaceLogIdentifier, err.Error())
 		return
 	}
 	addressVar := tfcloud.Variable{
@@ -196,7 +188,7 @@ func (a *App) updateTFCloudInstance(instance TFCloudConfig, wg *sync.WaitGroup) 
 		WorkspaceIdentifier: workspaceLogIdentifier,
 	}
 	if err := addressVar.Update(); err != nil {
-		klog.Errorf("error update VAULT_ADDR for ws %s: %s", instance.Workspace, err.Error())
+		klog.Errorf("error updating VAULT_ADDR for ws %s: %s", workspaceLogIdentifier, err.Error())
 		return
 	}
 }
@@ -212,6 +204,17 @@ func (a *App) refreshVaultTokenFromFile() error {
 		if err := os.Setenv("VAULT_TOKEN", token); err != nil {
 			return fmt.Errorf("could not set VAULT_TOKEN from file: %s", err.Error())
 		}
+		client, err := vault.NewClient(a.Config.VaultAddress, token)
+		if err != nil {
+			return err
+		}
+		a.VaultClient = client
+	} else {
+		client, err := vault.NewClient(a.Config.VaultAddress, os.Getenv("VAULT_TOKEN"))
+		if err != nil {
+			return err
+		}
+		a.VaultClient = client
 	}
 	return nil
 }
