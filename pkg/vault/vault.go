@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"k8s.io/klog/v2"
 )
 
 type Client struct {
@@ -67,7 +66,6 @@ func (c Client) CreateToken(role *string, policies []string, ttl time.Duration, 
 		return nil, err
 	}
 
-	klog.V(10).Infof("created token: %s", token.Auth.ClientToken)
 	return token, nil
 }
 

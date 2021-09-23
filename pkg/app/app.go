@@ -143,6 +143,7 @@ func (a *App) updateCircleCIInstance(project CircleCIConfig, wg *sync.WaitGroup)
 		klog.Errorf("error making token for CircleCI project %s: %s", projName, err.Error())
 		return
 	}
+	klog.V(10).Infof("got token %s for CircleCI project %s", token.Auth.ClientToken, projName)
 	klog.Infof("setting env var %s to vault token value in CircleCI project %s", projVariableName, projName)
 	if err := circleci.UpdateEnvVar(projName, projVariableName, token.Auth.ClientToken, a.CircleToken); err != nil {
 		klog.Errorf("error updating CircleCI project %s with token value: %s", projName, err.Error)
@@ -167,6 +168,7 @@ func (a *App) updateTFCloudInstance(instance TFCloudConfig, wg *sync.WaitGroup) 
 		klog.Errorf("error getting vault token for TFCloud workspace %s: %s", workspaceLogIdentifier, err.Error())
 		return
 	}
+	klog.V(10).Infof("got token %v for tfcloud workspace %s", token.Auth.ClientToken, workspaceLogIdentifier)
 	klog.Infof("setting env var %s to vault token value", a.Config.TokenVariable)
 	tokenVar := tfcloud.Variable{
 		Key:       a.Config.TokenVariable,
