@@ -172,7 +172,7 @@ func (a *App) updateTFCloudInstance(instance TFCloudConfig, wg *sync.WaitGroup) 
 	}
 	token, err := vault.CreateToken(instance.VaultRole, instance.VaultPolicies, a.Config.TokenTTL, a.Config.OrphanTokens)
 	if err != nil {
-		klog.Errorf("error making token for TFCloud workspace %s: %s", workspaceLogIdentifier, err)
+		klog.Errorf("error making token for TFCloud workspace %s: %s", workspaceLogIdentifier, err.Error())
 		return
 	}
 	klog.Infof("setting env var %s to vault token value", a.Config.TokenVariable)
