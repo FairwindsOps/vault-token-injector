@@ -101,40 +101,39 @@ func (a *App) Run() error {
 		if err := a.refreshVaultTokenFromFile(); err != nil {
 			klog.Error(err)
 		}
-		if err := a.updateCircleCI(); err != nil {
-			klog.Error(err)
-		}
-		if err := a.updateTFCloud(); err != nil {
-			klog.Error(err)
-		}
+		a.updateCircleCI()
+		a.updateTFCloud()
 		time.Sleep(a.Config.TokenRefreshInterval)
 	}
 }
 
-func (a *App) updateCircleCI() error {
+func (a *App) updateCircleCI() {
 	for _, project := range a.Config.CircleCI {
 		projName := project.Name
 		projVariableName := a.Config.TokenVariable
 		token, err := vault.CreateToken(project.VaultRole, project.VaultPolicies, a.Config.TokenTTL)
 		if err != nil {
-			return err
+			klog.Error(err)
+			continue
 		}
 		klog.Infof("setting env var %s to vault token value", projVariableName)
 		if err := circleci.UpdateEnvVar(projName, projVariableName, token.Auth.ClientToken, a.CircleToken); err != nil {
-			return err
+			klog.Error(err)
+			continue
 		}
 		if err := circleci.UpdateEnvVar(projName, "VAULT_ADDR", a.Config.VaultAddress, a.CircleToken); err != nil {
-			return err
+			klog.Error(err)
+			continue
 		}
 	}
-	return nil
 }
 
-func (a *App) updateTFCloud() error {
+func (a *App) updateTFCloud() {
 	for _, instance := range a.Config.TFCloud {
 		token, err := vault.CreateToken(instance.VaultRole, instance.VaultPolicies, a.Config.TokenTTL)
 		if err != nil {
-			return err
+			klog.Error(err)
+			continue
 		}
 		klog.Infof("setting env var %s to vault token value", a.Config.TokenVariable)
 		tokenVar := tfcloud.Variable{
@@ -145,7 +144,8 @@ func (a *App) updateTFCloud() error {
 			Workspace: instance.Workspace,
 		}
 		if err := tokenVar.Update(); err != nil {
-			return err
+			klog.Error(err)
+			continue
 		}
 		addressVar := tfcloud.Variable{
 			Key:       "VAULT_ADDR",
@@ -155,10 +155,10 @@ func (a *App) updateTFCloud() error {
 			Workspace: instance.Workspace,
 		}
 		if err := addressVar.Update(); err != nil {
-			return err
+			klog.Error(err)
+			continue
 		}
 	}
-	return nil
 }
 
 func (a *App) refreshVaultTokenFromFile() error {
