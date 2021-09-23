@@ -1,14 +1,73 @@
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
-	"os/exec"
-	"strings"
 	"time"
 
-	"k8s.io/klog/v2"
+	"github.com/hashicorp/vault/api"
 )
+
+type Client struct {
+	client *api.Client
+}
+
+func NewClient(address string, token string) (*Client, error) {
+	config := api.DefaultConfig()
+	config.Address = address
+	client, err := api.NewClient(config)
+	if err != nil {
+		return nil, err
+	}
+	client.SetToken(token)
+
+	tokenLookup := client.Token()
+	if tokenLookup == "" {
+		return nil, fmt.Errorf("no token provided")
+	}
+	return &Client{client: client}, nil
+}
+
+func (c Client) CreateToken(role *string, policies []string, ttl time.Duration, orphan bool) (*Token, error) {
+	tokenRequest := &api.TokenCreateRequest{
+		TTL: ttl.String(),
+	}
+
+	var resp *api.Secret
+	var err error
+
+	if role != nil {
+		resp, err = c.client.Auth().Token().CreateWithRole(tokenRequest, *role)
+		if err != nil {
+			return nil, err
+		}
+	} else if orphan {
+		tokenRequest.Policies = policies
+		resp, err = c.client.Auth().Token().CreateOrphan(tokenRequest)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		tokenRequest.Policies = policies
+		resp, err = c.client.Auth().Token().Create(tokenRequest)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	tokenTTL, err := resp.TokenTTL()
+	if err != nil {
+		return nil, err
+	}
+
+	token := &Token{}
+	token.Data.TTL = int(tokenTTL.Seconds())
+	token.Auth.ClientToken, err = resp.TokenID()
+	if err != nil {
+		return nil, err
+	}
+
+	return token, nil
+}
 
 // Token represents a token structure in Vault
 type Token struct {
@@ -18,44 +77,4 @@ type Token struct {
 	Auth struct {
 		ClientToken string `json:"client_token"`
 	} `json:"auth"`
-}
-
-// Creates a token using the provided role
-func CreateToken(role *string, policies []string, ttl time.Duration, orphan bool) (*Token, error) {
-	ttlString := fmt.Sprintf("-ttl=%s", ttl.String())
-	orphanString := fmt.Sprintf("-orphan=%t", orphan)
-	args := []string{"token", "create", "-format=json", orphanString, ttlString}
-
-	if role != nil {
-		klog.V(5).Infof("adding token role %s", *role)
-		args = append(args, fmt.Sprintf("-role=%s", *role))
-	}
-
-	for _, policy := range policies {
-		klog.V(5).Infof("adding policy %s to token", policy)
-		args = append(args, fmt.Sprintf("-policy=%s", policy))
-	}
-
-	output, _, err := execute("vault", args...)
-	if err != nil {
-		return nil, fmt.Errorf("error creating token: %s", err.Error())
-	}
-	token := &Token{}
-	err = json.Unmarshal([]byte(output), token)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshaling vault token: %s", err.Error())
-	}
-	klog.V(10).Infof("created token: %s", token.Auth.ClientToken)
-	return token, nil
-}
-
-// execute returns the output and error of a command run using inventory environment variables.
-func execute(name string, arg ...string) ([]byte, string, error) {
-	cmd := exec.Command(name, arg...)
-	data, err := cmd.CombinedOutput()
-	output := strings.TrimSpace(string(data))
-	if err != nil {
-		return nil, "", fmt.Errorf("exit code %d running command %s: %s", cmd.ProcessState.ExitCode(), cmd.String(), output)
-	}
-	return data, output, nil
 }
