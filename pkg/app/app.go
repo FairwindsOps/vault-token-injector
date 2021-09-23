@@ -138,16 +138,16 @@ func (a *App) updateCircleCIInstance(project CircleCIConfig, wg *sync.WaitGroup)
 	projVariableName := a.Config.TokenVariable
 	token, err := vault.CreateToken(project.VaultRole, project.VaultPolicies, a.Config.TokenTTL, a.Config.OrphanTokens)
 	if err != nil {
-		klog.Errorf("error making token for %s", projName, err)
+		klog.Errorf("error making token for CircleCI project %s", projName, err)
 		return
 	}
-	klog.Infof("setting env var %s to vault token value", projVariableName)
+	klog.Infof("setting env var %s to vault token value in CircleCI project %s", projVariableName, projName)
 	if err := circleci.UpdateEnvVar(projName, projVariableName, token.Auth.ClientToken, a.CircleToken); err != nil {
-		klog.Errorf("error updating %s with token value: %s", projVariableName, err.Error)
+		klog.Errorf("error updating CircleCI project %s with token value: %s", projName, err.Error)
 		return
 	}
 	if err := circleci.UpdateEnvVar(projName, "VAULT_ADDR", a.Config.VaultAddress, a.CircleToken); err != nil {
-		klog.Errorf("error updating VAULT_ADDR in %s: %s", projName, err)
+		klog.Errorf("error updating VAULT_ADDR in CircleCI project %s: %s", projName, err)
 		return
 	}
 }
@@ -164,9 +164,15 @@ func (a *App) updateTFCloud() {
 
 func (a *App) updateTFCloudInstance(instance TFCloudConfig, wg *sync.WaitGroup) {
 	defer wg.Done()
+	var workspaceLogIdentifier string
+	if instance.Name != "" {
+		workspaceLogIdentifier = instance.Name
+	} else {
+		workspaceLogIdentifier = instance.Workspace
+	}
 	token, err := vault.CreateToken(instance.VaultRole, instance.VaultPolicies, a.Config.TokenTTL, a.Config.OrphanTokens)
 	if err != nil {
-		klog.Errorf("error creating token for ws %s: %s", instance.Workspace, err.Error())
+		klog.Errorf("error making token for TFCloud workspace %s: %s", workspaceLogIdentifier, err)
 		return
 	}
 	klog.Infof("setting env var %s to vault token value", a.Config.TokenVariable)
@@ -178,15 +184,16 @@ func (a *App) updateTFCloudInstance(instance TFCloudConfig, wg *sync.WaitGroup) 
 		Workspace: instance.Workspace,
 	}
 	if err := tokenVar.Update(); err != nil {
-		klog.Errorf("error update token for ws %s: %s", instance.Workspace, err.Error())
+		klog.Errorf("error update token for TFCloud workspace %s: %s", workspaceLogIdentifier, err.Error())
 		return
 	}
 	addressVar := tfcloud.Variable{
-		Key:       "VAULT_ADDR",
-		Value:     a.Config.VaultAddress,
-		Sensitive: false,
-		Token:     a.TFCloudToken,
-		Workspace: instance.Workspace,
+		Key:                 "VAULT_ADDR",
+		Value:               a.Config.VaultAddress,
+		Sensitive:           false,
+		Token:               a.TFCloudToken,
+		Workspace:           instance.Workspace,
+		WorkspaceIdentifier: workspaceLogIdentifier,
 	}
 	if err := addressVar.Update(); err != nil {
 		klog.Errorf("error update VAULT_ADDR for ws %s: %s", instance.Workspace, err.Error())

@@ -8,16 +8,17 @@ import (
 )
 
 type Variable struct {
-	Workspace string
-	Key       string
-	Value     string
-	Token     string
-	Sensitive bool
+	Workspace           string
+	WorkspaceIdentifier string
+	Key                 string
+	Value               string
+	Token               string
+	Sensitive           bool
 }
 
 // Update will update a variable in TFCloud.
 func (v Variable) Update() error {
-	klog.Infof("setting env var %s in TFCloud workspace %s", v.Key, v.Workspace)
+	klog.Infof("setting env var %s in TFCloud workspace %s", v.Key, v.WorkspaceIdentifier)
 	config := &tfe.Config{
 		Token: v.Token,
 	}
@@ -42,7 +43,7 @@ func (v Variable) Update() error {
 	}
 	for _, tfvar := range tfvars.Items {
 		if tfvar.Key == v.Key {
-			klog.Infof("var %s already exists, updating instead", v.Key)
+			klog.Infof("var %s already exists in TFCloud workspace %s, updating instead", v.Key, v.WorkspaceIdentifier)
 
 			_, err = client.Variables.Update(ctx, v.Workspace, tfvar.ID, tfe.VariableUpdateOptions{
 				Description: &description,
