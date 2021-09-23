@@ -33,6 +33,11 @@ token_ttl: 10m
 token_refresh_interval: 1m
 ```
 
+## Logging
+
+You can adjust the logging level with the `-vX` flag where X can be 1-10.
+*WARNING* - Log level 10 will output secrets into the logs for debugging scenarios. Please do not do this in a production environment.
+
 Note that the time intervals are golang time.Duration strings
 
 ## Future Planned Enhancements
