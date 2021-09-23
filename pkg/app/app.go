@@ -28,6 +28,7 @@ type Config struct {
 	TFCloud              []TFCloudConfig  `mapstructure:"tfcloud"`
 	VaultAddress         string           `mapstructure:"vault_address"`
 	TokenVariable        string           `mapstructure:"token_variable"`
+	OrphanTokens         bool             `mapstructure:"orphan_tokens"`
 	TokenTTL             time.Duration    `mapstructure:"token_ttl"`
 	TokenRefreshInterval time.Duration    `mapstructure:"token_refresh_interval"`
 }
@@ -81,6 +82,7 @@ func NewApp(circleToken, vaultTokenFile, tfCloudToken string, config *Config) *A
 	klog.V(3).Infof("Token TTL: %s", app.Config.TokenTTL.String())
 	klog.V(3).Infof("Token Refresh Interval: %s", app.Config.TokenRefreshInterval.String())
 	klog.V(3).Infof("Vault Address: %s", app.Config.VaultAddress)
+	klog.V(3).Infof("Orphan Tokens: %t", app.Config.OrphanTokens)
 	klog.V(3).Infof("Circle Configs: %v", app.Config.CircleCI)
 	klog.V(3).Infof("TFCloud Configs: %v", app.Config.TFCloud)
 
@@ -111,7 +113,7 @@ func (a *App) updateCircleCI() {
 	for _, project := range a.Config.CircleCI {
 		projName := project.Name
 		projVariableName := a.Config.TokenVariable
-		token, err := vault.CreateToken(project.VaultRole, project.VaultPolicies, a.Config.TokenTTL)
+		token, err := vault.CreateToken(project.VaultRole, project.VaultPolicies, a.Config.TokenTTL, a.Config.OrphanTokens)
 		if err != nil {
 			klog.Error(err)
 			continue
@@ -130,7 +132,7 @@ func (a *App) updateCircleCI() {
 
 func (a *App) updateTFCloud() {
 	for _, instance := range a.Config.TFCloud {
-		token, err := vault.CreateToken(instance.VaultRole, instance.VaultPolicies, a.Config.TokenTTL)
+		token, err := vault.CreateToken(instance.VaultRole, instance.VaultPolicies, a.Config.TokenTTL, a.Config.OrphanTokens)
 		if err != nil {
 			klog.Error(err)
 			continue
