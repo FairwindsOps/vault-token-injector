@@ -82,6 +82,7 @@ func NewApp(circleToken, vaultTokenFile, tfCloudToken string, config *Config) *A
 	klog.V(3).Infof("Token TTL: %s", app.Config.TokenTTL.String())
 	klog.V(3).Infof("Token Refresh Interval: %s", app.Config.TokenRefreshInterval.String())
 	klog.V(3).Infof("Vault Address: %s", app.Config.VaultAddress)
+	klog.V(3).Infof("Orphan Tokens: %t", app.Config.OrphanTokens)
 	klog.V(3).Infof("Circle Configs: %v", app.Config.CircleCI)
 	klog.V(3).Infof("TFCloud Configs: %v", app.Config.TFCloud)
 
