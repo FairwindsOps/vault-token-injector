@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/klog/v2"
 
 	"github.com/fairwindsops/vault-token-injector/pkg/circleci"
@@ -23,6 +25,7 @@ type App struct {
 	VaultTokenFile string
 	VaultClient    *vault.Client
 	TFCloudToken   string
+	Errors         *Errors
 }
 
 // Config represents the configuration file
@@ -70,6 +73,9 @@ func NewApp(circleToken, vaultTokenFile, tfCloudToken string, config *Config) *A
 		TFCloudToken:   tfCloudToken,
 		VaultTokenFile: vaultTokenFile,
 	}
+
+	app.registerErrors()
+
 	if len(app.Config.CircleCI) > 0 && circleToken == "" {
 		klog.Error("CircleCI is configured but no token was provided.")
 	}
@@ -113,10 +119,14 @@ func (a *App) Run() error {
 		os.Exit(0)
 	}()
 
+	http.Handle("/metrics", promhttp.Handler())
+	go http.ListenAndServe(":2112", nil)
+
 	klog.Info("starting main application loop")
 	for {
 		if err := a.refreshVaultToken(); err != nil {
-			klog.Error("unable to get a valid token, skipping loop: %s", err)
+			klog.Errorf("unable to get a valid token, skipping loop: %s", err)
+			a.incrementVaultError()
 			time.Sleep(a.Config.TokenRefreshInterval)
 			continue
 		}
@@ -168,6 +178,7 @@ func (a *App) updateTFCloudInstance(instance TFCloudConfig, wg *sync.WaitGroup) 
 	token, err := a.VaultClient.CreateToken(instance.VaultRole, instance.VaultPolicies, a.Config.TokenTTL, a.Config.OrphanTokens)
 	if err != nil {
 		klog.Errorf("error getting vault token for TFCloud workspace %s: %s", workspaceLogIdentifier, err.Error())
+		a.incrementVaultError()
 		return
 	}
 	klog.V(10).Infof("got token %v for tfcloud workspace %s", token.Auth.ClientToken, workspaceLogIdentifier)
@@ -181,6 +192,7 @@ func (a *App) updateTFCloudInstance(instance TFCloudConfig, wg *sync.WaitGroup) 
 	}
 	if err := tokenVar.Update(); err != nil {
 		klog.Errorf("error updating token for TFCloud workspace %s: %s", workspaceLogIdentifier, err.Error())
+
 		return
 	}
 	addressVar := tfcloud.Variable{
