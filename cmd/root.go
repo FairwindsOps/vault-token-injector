@@ -49,7 +49,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	app := app.NewApp(circleToken, vaultTokenFile, tfCloudToken, config)
+	app := app.NewApp(circleToken, vaultTokenFile, tfCloudToken, config, true)
 
 	return app.Run()
 }

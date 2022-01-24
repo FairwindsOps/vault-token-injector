@@ -66,7 +66,7 @@ type TFCloudConfig struct {
 }
 
 // NewApp creates a new App from the given configuration options
-func NewApp(circleToken, vaultTokenFile, tfCloudToken string, config *Config) *App {
+func NewApp(circleToken, vaultTokenFile, tfCloudToken string, config *Config, registerErrors bool) *App {
 	app := &App{
 		Config:         config,
 		CircleToken:    circleToken,
@@ -74,7 +74,9 @@ func NewApp(circleToken, vaultTokenFile, tfCloudToken string, config *Config) *A
 		VaultTokenFile: vaultTokenFile,
 	}
 
-	app.registerErrors()
+	if registerErrors {
+		app.registerErrors()
+	}
 
 	if len(app.Config.CircleCI) > 0 && circleToken == "" {
 		klog.Error("CircleCI is configured but no token was provided.")
