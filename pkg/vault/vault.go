@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
+	"k8s.io/klog/v2"
 )
 
 type Client struct {
@@ -22,9 +23,19 @@ func NewClient(address string, token string) (*Client, error) {
 
 	tokenLookup := client.Token()
 	if tokenLookup == "" {
-		return nil, fmt.Errorf("no token provided")
+		return nil, fmt.Errorf("error refreshing token: no vault token was provided")
 	}
 	return &Client{client: client}, nil
+}
+
+func (c Client) LookupSelf() error {
+	info, err := c.client.Auth().Token().LookupSelf()
+	if err != nil {
+		return fmt.Errorf("error looking up self: %s", err.Error())
+	}
+	klog.V(10).Infof("got token info %v", info)
+	return nil
+
 }
 
 func (c Client) CreateToken(role *string, policies []string, ttl time.Duration, orphan bool) (*Token, error) {

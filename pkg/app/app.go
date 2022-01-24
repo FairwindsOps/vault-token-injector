@@ -115,8 +115,10 @@ func (a *App) Run() error {
 
 	klog.Info("starting main application loop")
 	for {
-		if err := a.refreshVaultTokenFromFile(); err != nil {
-			return err
+		if err := a.refreshVaultToken(); err != nil {
+			klog.Error("unable to get a valid token, skipping loop: %s", err)
+			time.Sleep(a.Config.TokenRefreshInterval)
+			continue
 		}
 		var wg sync.WaitGroup
 		for _, workspace := range a.Config.TFCloud {
@@ -195,7 +197,8 @@ func (a *App) updateTFCloudInstance(instance TFCloudConfig, wg *sync.WaitGroup) 
 	}
 }
 
-func (a *App) refreshVaultTokenFromFile() error {
+func (a *App) refreshVaultToken() error {
+	var client *vault.Client
 	if a.VaultTokenFile != "" {
 		klog.V(3).Infof("attempting to refresh token from file")
 		tokenData, err := os.ReadFile(a.VaultTokenFile)
@@ -206,17 +209,21 @@ func (a *App) refreshVaultTokenFromFile() error {
 		if err := os.Setenv("VAULT_TOKEN", token); err != nil {
 			return fmt.Errorf("could not set VAULT_TOKEN from file: %s", err.Error())
 		}
-		client, err := vault.NewClient(a.Config.VaultAddress, token)
+		client, err = vault.NewClient(a.Config.VaultAddress, token)
 		if err != nil {
 			return err
 		}
-		a.VaultClient = client
 	} else {
-		client, err := vault.NewClient(a.Config.VaultAddress, os.Getenv("VAULT_TOKEN"))
+		var err error
+		client, err = vault.NewClient(a.Config.VaultAddress, os.Getenv("VAULT_TOKEN"))
 		if err != nil {
 			return err
 		}
-		a.VaultClient = client
 	}
+	if err := client.LookupSelf(); err != nil {
+		klog.V(4).Infof("error looking up self: %s", err.Error())
+		return fmt.Errorf("current token was unable to lookup self, assuming invalid")
+	}
+	a.VaultClient = client
 	return nil
 }
