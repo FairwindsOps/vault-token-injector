@@ -33,6 +33,7 @@ var (
 	circleToken    string
 	tfCloudToken   string
 	vaultTokenFile string
+	enableMetrics  bool
 )
 
 var rootCmd = &cobra.Command{
@@ -49,7 +50,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	app := app.NewApp(circleToken, vaultTokenFile, tfCloudToken, config, true)
+	app := app.NewApp(circleToken, vaultTokenFile, tfCloudToken, config, enableMetrics)
 
 	return app.Run()
 }
@@ -69,6 +70,7 @@ func init() {
 	rootCmd.Flags().StringVar(&circleToken, "circle-token", "", "A circleci token.")
 	rootCmd.Flags().StringVar(&tfCloudToken, "tfcloud-token", "", "A token for TFCloud access.")
 	rootCmd.Flags().StringVar(&vaultTokenFile, "vault-token-file", "", "A file that contains a vault token. Optional - can set VAULT_TOKEN directly if preferred.")
+	rootCmd.Flags().BoolVar(&enableMetrics, "enable-metrics", true, "Enable the prometheus endpoint.")
 
 	envMap := map[string]string{
 		"CIRCLE_CI_TOKEN":  "circle-token",

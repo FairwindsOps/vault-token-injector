@@ -25,6 +25,7 @@ type App struct {
 	VaultTokenFile string
 	VaultClient    *vault.Client
 	TFCloudToken   string
+	EnableMetrics  bool
 	Errors         *Errors
 }
 
@@ -66,16 +67,13 @@ type TFCloudConfig struct {
 }
 
 // NewApp creates a new App from the given configuration options
-func NewApp(circleToken, vaultTokenFile, tfCloudToken string, config *Config, registerErrors bool) *App {
+func NewApp(circleToken, vaultTokenFile, tfCloudToken string, config *Config, enableMetrics bool) *App {
 	app := &App{
 		Config:         config,
 		CircleToken:    circleToken,
 		TFCloudToken:   tfCloudToken,
 		VaultTokenFile: vaultTokenFile,
-	}
-
-	if registerErrors {
-		app.registerErrors()
+		EnableMetrics:  enableMetrics,
 	}
 
 	if len(app.Config.CircleCI) > 0 && circleToken == "" {
@@ -121,8 +119,11 @@ func (a *App) Run() error {
 		os.Exit(0)
 	}()
 
-	http.Handle("/metrics", promhttp.Handler())
-	go http.ListenAndServe(":2112", nil)
+	if a.EnableMetrics {
+		a.registerErrors()
+		http.Handle("/metrics", promhttp.Handler())
+		go http.ListenAndServe(":2112", nil)
+	}
 
 	klog.Info("starting main application loop")
 	for {
