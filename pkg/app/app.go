@@ -122,7 +122,7 @@ func (a *App) Run() error {
 	if a.EnableMetrics {
 		a.registerErrors()
 		http.Handle("/metrics", promhttp.Handler())
-		go http.ListenAndServe(":2112", nil)
+		go http.ListenAndServe(":4329", nil)
 	}
 
 	klog.Info("starting main application loop")

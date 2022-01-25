@@ -70,7 +70,7 @@ func init() {
 	rootCmd.Flags().StringVar(&circleToken, "circle-token", "", "A circleci token.")
 	rootCmd.Flags().StringVar(&tfCloudToken, "tfcloud-token", "", "A token for TFCloud access.")
 	rootCmd.Flags().StringVar(&vaultTokenFile, "vault-token-file", "", "A file that contains a vault token. Optional - can set VAULT_TOKEN directly if preferred.")
-	rootCmd.Flags().BoolVar(&enableMetrics, "enable-metrics", true, "Enable the prometheus endpoint.")
+	rootCmd.Flags().BoolVar(&enableMetrics, "enable-metrics", true, "Enable a prometheus endpoint on port 4329.")
 
 	envMap := map[string]string{
 		"CIRCLE_CI_TOKEN":  "circle-token",
