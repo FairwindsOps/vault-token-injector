@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/klog/v2"
 
 	"github.com/fairwindsops/vault-token-injector/pkg/circleci"
@@ -23,6 +25,8 @@ type App struct {
 	VaultTokenFile string
 	VaultClient    *vault.Client
 	TFCloudToken   string
+	EnableMetrics  bool
+	Errors         *Errors
 }
 
 // Config represents the configuration file
@@ -63,13 +67,15 @@ type TFCloudConfig struct {
 }
 
 // NewApp creates a new App from the given configuration options
-func NewApp(circleToken, vaultTokenFile, tfCloudToken string, config *Config) *App {
+func NewApp(circleToken, vaultTokenFile, tfCloudToken string, config *Config, enableMetrics bool) *App {
 	app := &App{
 		Config:         config,
 		CircleToken:    circleToken,
 		TFCloudToken:   tfCloudToken,
 		VaultTokenFile: vaultTokenFile,
+		EnableMetrics:  enableMetrics,
 	}
+
 	if len(app.Config.CircleCI) > 0 && circleToken == "" {
 		klog.Error("CircleCI is configured but no token was provided.")
 	}
@@ -113,10 +119,19 @@ func (a *App) Run() error {
 		os.Exit(0)
 	}()
 
+	if a.EnableMetrics {
+		a.registerErrors()
+		http.Handle("/metrics", promhttp.Handler())
+		go http.ListenAndServe(":4329", nil)
+	}
+
 	klog.Info("starting main application loop")
 	for {
-		if err := a.refreshVaultTokenFromFile(); err != nil {
-			return err
+		if err := a.refreshVaultToken(); err != nil {
+			klog.Errorf("unable to get a valid token, skipping loop: %s", err)
+			a.incrementVaultError()
+			time.Sleep(a.Config.TokenRefreshInterval)
+			continue
 		}
 		var wg sync.WaitGroup
 		for _, workspace := range a.Config.TFCloud {
@@ -166,6 +181,7 @@ func (a *App) updateTFCloudInstance(instance TFCloudConfig, wg *sync.WaitGroup) 
 	token, err := a.VaultClient.CreateToken(instance.VaultRole, instance.VaultPolicies, a.Config.TokenTTL, a.Config.OrphanTokens)
 	if err != nil {
 		klog.Errorf("error getting vault token for TFCloud workspace %s: %s", workspaceLogIdentifier, err.Error())
+		a.incrementVaultError()
 		return
 	}
 	klog.V(10).Infof("got token %v for tfcloud workspace %s", token.Auth.ClientToken, workspaceLogIdentifier)
@@ -179,6 +195,7 @@ func (a *App) updateTFCloudInstance(instance TFCloudConfig, wg *sync.WaitGroup) 
 	}
 	if err := tokenVar.Update(); err != nil {
 		klog.Errorf("error updating token for TFCloud workspace %s: %s", workspaceLogIdentifier, err.Error())
+
 		return
 	}
 	addressVar := tfcloud.Variable{
@@ -195,7 +212,8 @@ func (a *App) updateTFCloudInstance(instance TFCloudConfig, wg *sync.WaitGroup) 
 	}
 }
 
-func (a *App) refreshVaultTokenFromFile() error {
+func (a *App) refreshVaultToken() error {
+	var client *vault.Client
 	if a.VaultTokenFile != "" {
 		klog.V(3).Infof("attempting to refresh token from file")
 		tokenData, err := os.ReadFile(a.VaultTokenFile)
@@ -206,17 +224,21 @@ func (a *App) refreshVaultTokenFromFile() error {
 		if err := os.Setenv("VAULT_TOKEN", token); err != nil {
 			return fmt.Errorf("could not set VAULT_TOKEN from file: %s", err.Error())
 		}
-		client, err := vault.NewClient(a.Config.VaultAddress, token)
+		client, err = vault.NewClient(a.Config.VaultAddress, token)
 		if err != nil {
 			return err
 		}
-		a.VaultClient = client
 	} else {
-		client, err := vault.NewClient(a.Config.VaultAddress, os.Getenv("VAULT_TOKEN"))
+		var err error
+		client, err = vault.NewClient(a.Config.VaultAddress, os.Getenv("VAULT_TOKEN"))
 		if err != nil {
 			return err
 		}
-		a.VaultClient = client
 	}
+	if err := client.LookupSelf(); err != nil {
+		klog.V(4).Infof("error looking up self: %s", err.Error())
+		return fmt.Errorf("current token was unable to lookup self, assuming invalid")
+	}
+	a.VaultClient = client
 	return nil
 }
