@@ -18,5 +18,5 @@ require (
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.7.0
 	gopkg.in/ini.v1 v1.62.0 // indirect
-	k8s.io/klog/v2 v2.9.0
+	k8s.io/klog/v2 v2.40.1
 )
