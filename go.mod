@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
-	github.com/hashicorp/go-tfe v0.17.1
+	github.com/hashicorp/go-tfe v0.26.0
 	github.com/hashicorp/vault/api v1.1.1
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/mitchellh/mapstructure v1.4.1 // indirect
