@@ -1,4 +1,6 @@
 .vault-token-injector.yaml
+cover-report.html
+govet-report.out
 hack/
 /vault-token-injector
 /dist

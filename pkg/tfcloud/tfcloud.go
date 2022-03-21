@@ -32,7 +32,7 @@ func (v Variable) Update() error {
 	category := tfe.CategoryEnv
 	description := "Auto-Injected by vault-token-injector"
 
-	tfvars, err := client.Variables.List(ctx, v.Workspace, tfe.VariableListOptions{
+	tfvars, err := client.Variables.List(ctx, v.Workspace, &tfe.VariableListOptions{
 		ListOptions: tfe.ListOptions{
 			PageNumber: 1,
 			PageSize:   1000,
