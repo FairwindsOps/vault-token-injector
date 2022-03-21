@@ -9,7 +9,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.2 // indirect
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.3 // indirect
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 // indirect
-	github.com/hashicorp/go-tfe v0.26.0
+	github.com/hashicorp/go-tfe v1.0.0
 	github.com/hashicorp/go-version v1.4.0 // indirect
 	github.com/hashicorp/vault/api v1.3.1
 	github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87 // indirect
