@@ -30,5 +30,5 @@ require (
 	google.golang.org/genproto v0.0.0-20220217155828-d576998c0009 // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
-	k8s.io/klog/v2 v2.40.1
+	k8s.io/klog/v2 v2.60.1
 )
