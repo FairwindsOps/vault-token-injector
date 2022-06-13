@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/hashicorp/go-tfe v1.0.0
 	github.com/hashicorp/vault/api v1.3.1
-	github.com/prometheus/client_golang v1.12.1
+	github.com/prometheus/client_golang v1.12.2
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
