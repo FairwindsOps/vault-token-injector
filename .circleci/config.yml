@@ -16,7 +16,7 @@ references:
         apk --update add yq
 jobs:
   test:
-    working_directory: /go/src/github.com/fairwindsops/vault-token-injector
+    working_directory: /home/circleci/go/src/github.com/fairwindsops/vault-token-injector
     docker:
       - image: cimg/go:1.18
     steps:
