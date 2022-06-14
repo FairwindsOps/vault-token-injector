@@ -16,11 +16,9 @@ references:
         apk --update add yq
 jobs:
   test:
-    working_directory: /go/src/github.com/fairwindsops/vault-token-injector
+    working_directory: /home/circleci/go/src/github.com/fairwindsops/vault-token-injector
     docker:
-      - image: circleci/golang:1.17-buster
-        environment:
-          GO111MODULE: "on"
+      - image: cimg/go:1.18
     steps:
       - checkout
       - run:
@@ -30,14 +28,11 @@ jobs:
           name: Run Tests
           command: |
             go test -v ./... -coverprofile=coverage.txt -covermode=atomic
-            go get -u github.com/jstemmer/go-junit-report
-            mkdir -p /tmp/test_results/junit
-            go test -v ./... -count 5 2>&1 | go-junit-report > /tmp/test_results/junit/report.xml
       - store_test_results:
           path: /tmp/test_results
   release:
     docker:
-      - image: goreleaser/goreleaser:v0.174.2
+      - image: goreleaser/goreleaser:v1.9.0
     resource_class: large
     shell: /bin/bash
     steps:
@@ -55,7 +50,7 @@ jobs:
             goreleaser
   snapshot:
     docker:
-      - image: goreleaser/goreleaser:v0.174.2
+      - image: goreleaser/goreleaser:v1.9.0
     steps:
       - checkout
       - setup_remote_docker
