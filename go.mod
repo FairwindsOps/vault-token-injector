@@ -10,7 +10,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.7.3
-	k8s.io/klog/v2 v2.60.1
+	k8s.io/klog/v2 v2.70.0
 )
 
 require (
