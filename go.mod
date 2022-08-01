@@ -3,7 +3,7 @@ module github.com/fairwindsops/vault-token-injector
 go 1.18
 
 require (
-	github.com/hashicorp/go-tfe v1.4.0
+	github.com/hashicorp/go-tfe v1.6.0
 	github.com/hashicorp/vault/api v1.7.2
 	github.com/prometheus/client_golang v1.12.2
 	github.com/spf13/cobra v1.5.0
