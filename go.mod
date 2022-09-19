@@ -3,7 +3,7 @@ module github.com/fairwindsops/vault-token-injector
 go 1.18
 
 require (
-	github.com/hashicorp/go-tfe v1.4.0
+	github.com/hashicorp/go-tfe v1.10.0
 	github.com/hashicorp/vault/api v1.7.2
 	github.com/prometheus/client_golang v1.12.2
 	github.com/spf13/cobra v1.5.0
@@ -37,7 +37,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.1 // indirect
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.6 // indirect
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 // indirect
-	github.com/hashicorp/go-slug v0.9.1 // indirect
+	github.com/hashicorp/go-slug v0.10.0 // indirect
 	github.com/hashicorp/go-sockaddr v1.0.2 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/go-version v1.2.0 // indirect
