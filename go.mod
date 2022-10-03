@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/hashicorp/go-tfe v1.4.0
-	github.com/hashicorp/vault/api v1.7.2
+	github.com/hashicorp/vault/api v1.8.0
 	github.com/prometheus/client_golang v1.12.2
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/pflag v1.0.5
@@ -44,7 +44,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hashicorp/jsonapi v0.0.0-20210826224640-ee7dae0fb22d // indirect
-	github.com/hashicorp/vault/sdk v0.5.1 // indirect
+	github.com/hashicorp/vault/sdk v0.6.0 // indirect
 	github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
