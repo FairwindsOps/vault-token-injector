@@ -26,7 +26,7 @@ type App struct {
 	VaultClient    *vault.Client
 	TFCloudToken   string
 	EnableMetrics  bool
-	Errors         *Errors
+	Metrics        *Metrics
 }
 
 // Config represents the configuration file
@@ -120,7 +120,7 @@ func (a *App) Run() error {
 	}()
 
 	if a.EnableMetrics {
-		a.registerErrors()
+		a.registerMetrics()
 		http.Handle("/metrics", promhttp.Handler())
 		go http.ListenAndServe(":4329", nil)
 	}
@@ -171,6 +171,7 @@ func (a *App) updateCircleCIInstance(project CircleCIConfig, wg *sync.WaitGroup)
 		klog.Errorf("error updating VAULT_ADDR in CircleCI project %s: %w", projName, err)
 		return
 	}
+	a.Metrics.circleTokensUpdated.Inc()
 }
 
 func (a *App) updateTFCloudInstance(instance TFCloudConfig, wg *sync.WaitGroup) {
@@ -214,6 +215,7 @@ func (a *App) updateTFCloudInstance(instance TFCloudConfig, wg *sync.WaitGroup) 
 		klog.Errorf("error updating VAULT_ADDR for ws %s: %w", workspaceLogIdentifier, err)
 		return
 	}
+	a.Metrics.tfcloudTokensUpdated.Inc()
 }
 
 func (a *App) refreshVaultToken() error {

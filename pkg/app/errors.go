@@ -5,7 +5,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-type Errors struct {
+type Metrics struct {
 	totalErrorCount      prometheus.Counter
 	vaultErrorCount      prometheus.Counter
 	circleCIErrorCount   prometheus.Counter
@@ -14,8 +14,8 @@ type Errors struct {
 	tfcloudTokensUpdated prometheus.Counter
 }
 
-func (a *App) registerErrors() {
-	a.Errors = &Errors{
+func (a *App) registerMetrics() {
+	a.Metrics = &Metrics{
 		totalErrorCount: promauto.NewCounter(prometheus.CounterOpts{
 			Name: "vault_token_injector_errors_total",
 			Help: "The number of errors encountered",
@@ -44,16 +44,16 @@ func (a *App) registerErrors() {
 }
 
 func (a App) incrementVaultError() {
-	a.Errors.vaultErrorCount.Inc()
-	a.Errors.totalErrorCount.Inc()
+	a.Metrics.vaultErrorCount.Inc()
+	a.Metrics.totalErrorCount.Inc()
 }
 
 func (a App) incrementTfCloudError() {
-	a.Errors.tfCloudErrorCount.Inc()
-	a.Errors.totalErrorCount.Inc()
+	a.Metrics.tfCloudErrorCount.Inc()
+	a.Metrics.totalErrorCount.Inc()
 }
 
 func (a App) incremenCircleCIError() {
-	a.Errors.circleCIErrorCount.Inc()
-	a.Errors.totalErrorCount.Inc()
+	a.Metrics.circleCIErrorCount.Inc()
+	a.Metrics.totalErrorCount.Inc()
 }
