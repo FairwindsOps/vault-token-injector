@@ -53,7 +53,7 @@ func (a App) incrementTfCloudError() {
 	a.Metrics.totalErrorCount.Inc()
 }
 
-func (a App) incremenCircleCIError() {
+func (a App) incrementCircleCIError() {
 	a.Metrics.circleCIErrorCount.Inc()
 	a.Metrics.totalErrorCount.Inc()
 }

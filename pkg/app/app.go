@@ -162,12 +162,12 @@ func (a *App) updateCircleCIInstance(project CircleCIConfig, wg *sync.WaitGroup)
 	klog.V(10).Infof("got token %s for CircleCI project %s", token.Auth.ClientToken, projName)
 	klog.Infof("setting env var %s to vault token value in CircleCI project %s", projVariableName, projName)
 	if err := circleci.UpdateEnvVar(projName, projVariableName, token.Auth.ClientToken, a.CircleToken); err != nil {
-		a.incremenCircleCIError()
+		a.incrementCircleCIError()
 		klog.Errorf("error updating CircleCI project %s with token value: %w", projName, err)
 		return
 	}
 	if err := circleci.UpdateEnvVar(projName, "VAULT_ADDR", a.Config.VaultAddress, a.CircleToken); err != nil {
-		a.incremenCircleCIError()
+		a.incrementCircleCIError()
 		klog.Errorf("error updating VAULT_ADDR in CircleCI project %s: %w", projName, err)
 		return
 	}
