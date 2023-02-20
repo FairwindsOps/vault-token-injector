@@ -122,6 +122,7 @@ func (a *App) Run() error {
 	if a.EnableMetrics {
 		a.registerMetrics()
 		http.Handle("/metrics", promhttp.Handler())
+		http.Handle("/health", http.HandlerFunc(a.healthHandler))
 		go http.ListenAndServe(":4329", nil)
 	}
 
@@ -135,7 +136,6 @@ func (a *App) Run() error {
 		}
 		var wg sync.WaitGroup
 		for _, workspace := range a.Config.TFCloud {
-
 			wg.Add(1)
 			go a.updateTFCloudInstance(workspace, &wg)
 		}
