@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -34,6 +34,7 @@ var (
 	tfCloudToken   string
 	vaultTokenFile string
 	enableMetrics  bool
+	runOnce        bool
 )
 
 var rootCmd = &cobra.Command{
@@ -52,6 +53,9 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	app := app.NewApp(circleToken, vaultTokenFile, tfCloudToken, config, enableMetrics)
 
+	if runOnce {
+		return app.RunOnce()
+	}
 	return app.Run()
 }
 
@@ -71,6 +75,7 @@ func init() {
 	rootCmd.Flags().StringVar(&tfCloudToken, "tfcloud-token", "", "A token for TFCloud access.")
 	rootCmd.Flags().StringVar(&vaultTokenFile, "vault-token-file", "", "A file that contains a vault token. Optional - can set VAULT_TOKEN directly if preferred.")
 	rootCmd.Flags().BoolVar(&enableMetrics, "enable-metrics", true, "Enable a prometheus endpoint on port 4329.")
+	rootCmd.Flags().BoolVar(&runOnce, "run-once", false, "If true, will run the token injection one time. Does not enable health endpoint or metrics.")
 
 	envMap := map[string]string{
 		"CIRCLE_CI_TOKEN":  "circle-token",

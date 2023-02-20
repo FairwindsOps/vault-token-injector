@@ -149,6 +149,27 @@ func (a *App) Run() error {
 	}
 }
 
+// RunOnce just does a single run for use with a Kubernetes cronjob
+func (a *App) RunOnce() error {
+
+	klog.Info("running the token injection once")
+
+	if err := a.refreshVaultToken(); err != nil {
+		return err
+	}
+	var wg sync.WaitGroup
+	for _, workspace := range a.Config.TFCloud {
+		wg.Add(1)
+		go a.updateTFCloudInstance(workspace, &wg)
+	}
+	for _, project := range a.Config.CircleCI {
+		wg.Add(1)
+		go a.updateCircleCIInstance(project, &wg)
+	}
+	wg.Wait()
+	return nil
+}
+
 func (a *App) updateCircleCIInstance(project CircleCIConfig, wg *sync.WaitGroup) {
 	defer wg.Done()
 	projName := project.Name
