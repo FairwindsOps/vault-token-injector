@@ -54,6 +54,7 @@ func run(cmd *cobra.Command, args []string) error {
 	app := app.NewApp(circleToken, vaultTokenFile, tfCloudToken, config, enableMetrics)
 
 	if runOnce {
+		app.EnableMetrics = false
 		return app.RunOnce()
 	}
 	return app.Run()
