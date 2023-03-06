@@ -44,16 +44,22 @@ func (a *App) registerMetrics() {
 }
 
 func (a App) incrementVaultError() {
-	a.Metrics.vaultErrorCount.Inc()
-	a.Metrics.totalErrorCount.Inc()
+	if a.EnableMetrics {
+		a.Metrics.vaultErrorCount.Inc()
+		a.Metrics.totalErrorCount.Inc()
+	}
 }
 
 func (a App) incrementTfCloudError() {
-	a.Metrics.tfCloudErrorCount.Inc()
-	a.Metrics.totalErrorCount.Inc()
+	if a.EnableMetrics {
+		a.Metrics.tfCloudErrorCount.Inc()
+		a.Metrics.totalErrorCount.Inc()
+	}
 }
 
 func (a App) incrementCircleCIError() {
-	a.Metrics.circleCIErrorCount.Inc()
-	a.Metrics.totalErrorCount.Inc()
+	if a.EnableMetrics {
+		a.Metrics.circleCIErrorCount.Inc()
+		a.Metrics.totalErrorCount.Inc()
+	}
 }
