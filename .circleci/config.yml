@@ -10,15 +10,15 @@ references:
       name: install hashicorp vault
       command: |
         cd /tmp
-        curl -LO https://releases.hashicorp.com/vault/1.8.1/vault_1.8.1_linux_amd64.zip
-        unzip vault_1.8.1_linux_amd64.zip
+        curl -LO https://releases.hashicorp.com/vault/1.12.4/vault_1.12.4_linux_amd64.zip
+        unzip vault_1.12.4_linux_amd64.zip
         mv vault /usr/bin/vault
         apk --update add yq
 jobs:
   test:
     working_directory: /home/circleci/go/src/github.com/fairwindsops/vault-token-injector
     docker:
-      - image: cimg/go:1.18
+      - image: cimg/go:1.19
     steps:
       - checkout
       - run:
@@ -32,7 +32,7 @@ jobs:
           path: /tmp/test_results
   release:
     docker:
-      - image: goreleaser/goreleaser:v1.9.0
+      - image: goreleaser/goreleaser:v1.16.1
     resource_class: large
     shell: /bin/bash
     steps:
@@ -41,22 +41,25 @@ jobs:
       - rok8s/get_vault_env:
           vault_path: repo/global/env
       - setup_remote_docker
-      - rok8s/docker_login:
-          username: ${FAIRWINDS_QUAY_USER}
-          password-variable: FAIRWINDS_QUAY_TOKEN
+      - run:
+          name: docker login
+          command: |
+            docker login -u _json_key -p "$(echo $GCP_ARTIFACTREADWRITE_JSON_KEY | base64 -d)" us-docker.pkg.dev
+      - run: echo 'export GORELEASER_CURRENT_TAG="${CIRCLE_TAG}"' >> $BASH_ENV
+      - run: goreleaser
       - run:
           name: Goreleaser
           command: |
             goreleaser
   snapshot:
     docker:
-      - image: goreleaser/goreleaser:v1.9.0
+      - image: goreleaser/goreleaser:v1.16.1
     steps:
       - checkout
       - setup_remote_docker
       - run:
           name: Goreleaser Snapshot
-          command: goreleaser --snapshot
+          command: goreleaser --snapshot --skip-sign
       - store_artifacts:
           path: dist
           destination: snapshot
