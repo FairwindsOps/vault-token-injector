@@ -59,7 +59,7 @@ jobs:
       - setup_remote_docker
       - run:
           name: Goreleaser Snapshot
-          command: goreleaser --snapshot
+          command: goreleaser --snapshot --skip-sign
       - store_artifacts:
           path: dist
           destination: snapshot
