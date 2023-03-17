@@ -167,6 +167,10 @@ func (a *App) RunOnce() error {
 		go a.updateCircleCIInstance(project, &wg)
 	}
 	wg.Wait()
+	errCount := getMetricValue(a.Metrics.totalErrorCount)
+	if errCount > 0 {
+		return fmt.Errorf("there were errors during during the run. see the logs for more details")
+	}
 	return nil
 }
 
