@@ -11,7 +11,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.2
-	k8s.io/klog/v2 v2.90.0
+	k8s.io/klog/v2 v2.100.1
 )
 
 require (
