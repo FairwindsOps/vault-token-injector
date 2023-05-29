@@ -3,14 +3,14 @@ module github.com/fairwindsops/vault-token-injector
 go 1.19
 
 require (
-	github.com/hashicorp/go-tfe v1.18.0
+	github.com/hashicorp/go-tfe v1.25.1
 	github.com/hashicorp/vault/api v1.9.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/client_model v0.3.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.15.0
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.3
 	k8s.io/klog/v2 v2.90.0
 )
 
@@ -32,7 +32,7 @@ require (
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.7 // indirect
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 // indirect
-	github.com/hashicorp/go-slug v0.10.1 // indirect
+	github.com/hashicorp/go-slug v0.11.1 // indirect
 	github.com/hashicorp/go-sockaddr v1.0.2 // indirect
 	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
