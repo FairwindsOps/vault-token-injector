@@ -154,6 +154,12 @@ func (a *App) RunOnce() error {
 
 	klog.Info("running the token injection once")
 
+	a.registerMetrics()
+	if a.EnableMetrics {
+		http.Handle("/metrics", promhttp.Handler())
+		go http.ListenAndServe(":4329", nil)
+	}
+
 	if err := a.refreshVaultToken(); err != nil {
 		return err
 	}
