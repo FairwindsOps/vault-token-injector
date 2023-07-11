@@ -18,7 +18,7 @@ jobs:
   test:
     working_directory: /home/circleci/go/src/github.com/fairwindsops/vault-token-injector
     docker:
-      - image: cimg/go:1.19
+      - image: cimg/go:1.20
     steps:
       - checkout
       - run:
@@ -32,7 +32,7 @@ jobs:
           path: /tmp/test_results
   release:
     docker:
-      - image: goreleaser/goreleaser:v1.16.1
+      - image: goreleaser/goreleaser:v1.19.2
     resource_class: large
     shell: /bin/bash
     steps:
@@ -49,7 +49,7 @@ jobs:
       - run: goreleaser
   snapshot:
     docker:
-      - image: goreleaser/goreleaser:v1.16.1
+      - image: goreleaser/goreleaser:v1.19.2
     steps:
       - checkout
       - setup_remote_docker
