@@ -147,7 +147,6 @@ func (a *App) Run() error {
 			continue
 		}
 		wg.Wait()
-		wg.Wait()
 
 		time.Sleep(a.Config.TokenRefreshInterval)
 	}
