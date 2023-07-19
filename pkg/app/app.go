@@ -14,25 +14,28 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/fairwindsops/vault-token-injector/pkg/circleci"
+	"github.com/fairwindsops/vault-token-injector/pkg/spacelift"
 	"github.com/fairwindsops/vault-token-injector/pkg/tfcloud"
 	"github.com/fairwindsops/vault-token-injector/pkg/vault"
 )
 
 // App is the main application struct
 type App struct {
-	Config         *Config
-	CircleToken    string
-	VaultTokenFile string
-	VaultClient    *vault.Client
-	TFCloudToken   string
-	EnableMetrics  bool
-	Metrics        *Metrics
+	Config          *Config
+	CircleToken     string
+	VaultTokenFile  string
+	VaultClient     *vault.Client
+	TFCloudToken    string
+	EnableMetrics   bool
+	Metrics         *Metrics
+	SpaceliftClient *spacelift.Client
 }
 
 // Config represents the configuration file
 type Config struct {
-	CircleCI []CircleCIConfig `mapstructure:"circleci"`
-	TFCloud  []TFCloudConfig  `mapstructure:"tfcloud"`
+	CircleCI  []CircleCIConfig  `mapstructure:"circleci"`
+	TFCloud   []TFCloudConfig   `mapstructure:"tfcloud"`
+	Spacelift []SpaceliftConfig `mapstructure:"spacelift"`
 	// The address of the vault server to use when creating tokens
 	VaultAddress string `mapstructure:"vault_address"`
 	// The variable name to use when setting a vault token. Defaults to VAULT_ADDR
@@ -66,14 +69,24 @@ type TFCloudConfig struct {
 	VaultPolicies []string `mapstructure:"vault_policies"`
 }
 
+type SpaceliftConfig struct {
+	// Stack is the name of a Spacelift stack that you want to inject vars into
+	Stack string `mapstructure:"stack"`
+	// VaultRole is the vault role to use for the token in this stack
+	VaultRole *string `mapstructure:"vault_role"`
+	// VaultPolicies is a list of policies that will be given to the token in this stack
+	VaultPolicies []string `mapstructure:"vault_policies"`
+}
+
 // NewApp creates a new App from the given configuration options
-func NewApp(circleToken, vaultTokenFile, tfCloudToken string, config *Config, enableMetrics bool) *App {
+func NewApp(circleToken, vaultTokenFile, tfCloudToken string, config *Config, enableMetrics bool, spaceliftClient *spacelift.Client) *App {
 	app := &App{
-		Config:         config,
-		CircleToken:    circleToken,
-		TFCloudToken:   tfCloudToken,
-		VaultTokenFile: vaultTokenFile,
-		EnableMetrics:  enableMetrics,
+		Config:          config,
+		CircleToken:     circleToken,
+		TFCloudToken:    tfCloudToken,
+		VaultTokenFile:  vaultTokenFile,
+		SpaceliftClient: spaceliftClient,
+		EnableMetrics:   enableMetrics,
 	}
 
 	if len(app.Config.CircleCI) > 0 && circleToken == "" {
@@ -128,21 +141,12 @@ func (a *App) Run() error {
 
 	klog.Info("starting main application loop")
 	for {
-		if err := a.refreshVaultToken(); err != nil {
-			klog.Errorf("unable to get a valid token, skipping loop: %s", err)
-			a.incrementVaultError()
+		var wg sync.WaitGroup
+		if err := a.injectVars(&wg); err != nil {
 			time.Sleep(a.Config.TokenRefreshInterval)
 			continue
 		}
-		var wg sync.WaitGroup
-		for _, workspace := range a.Config.TFCloud {
-			wg.Add(1)
-			go a.updateTFCloudInstance(workspace, &wg)
-		}
-		for _, project := range a.Config.CircleCI {
-			wg.Add(1)
-			go a.updateCircleCIInstance(project, &wg)
-		}
+		wg.Wait()
 		wg.Wait()
 
 		time.Sleep(a.Config.TokenRefreshInterval)
@@ -160,22 +164,35 @@ func (a *App) RunOnce() error {
 		go http.ListenAndServe(":4329", nil)
 	}
 
-	if err := a.refreshVaultToken(); err != nil {
-		return err
-	}
 	var wg sync.WaitGroup
-	for _, workspace := range a.Config.TFCloud {
-		wg.Add(1)
-		go a.updateTFCloudInstance(workspace, &wg)
-	}
-	for _, project := range a.Config.CircleCI {
-		wg.Add(1)
-		go a.updateCircleCIInstance(project, &wg)
+	if err := a.injectVars(&wg); err != nil {
+		return err
 	}
 	wg.Wait()
 	errCount := getMetricValue(a.Metrics.totalErrorCount)
 	if errCount > 0 {
 		return fmt.Errorf("there were errors during during the run. see the logs for more details")
+	}
+	return nil
+}
+
+func (a *App) injectVars(wg *sync.WaitGroup) error {
+	if err := a.refreshVaultToken(); err != nil {
+		klog.Errorf("unable to get a valid token, skipping loop: %s", err)
+		a.incrementVaultError()
+		return err
+	}
+	for _, workspace := range a.Config.TFCloud {
+		wg.Add(1)
+		go a.updateTFCloudInstance(workspace, wg)
+	}
+	for _, project := range a.Config.CircleCI {
+		wg.Add(1)
+		go a.updateCircleCIInstance(project, wg)
+	}
+	for _, stack := range a.Config.Spacelift {
+		wg.Add(1)
+		go a.updateSpaceliftInstance(stack, wg)
 	}
 	return nil
 }
@@ -205,6 +222,42 @@ func (a *App) updateCircleCIInstance(project CircleCIConfig, wg *sync.WaitGroup)
 	if a.EnableMetrics {
 		a.Metrics.circleTokensUpdated.Inc()
 	}
+}
+
+func (a *App) updateSpaceliftInstance(instance SpaceliftConfig, wg *sync.WaitGroup) {
+	defer wg.Done()
+	if err := a.SpaceliftClient.RefreshJWT(); err != nil {
+		klog.Errorf("could not refresh Spacelift API auth via JWT: %s", err.Error())
+		a.incrementSpaceliftError()
+		return
+	}
+
+	token, err := a.VaultClient.CreateToken(instance.VaultRole, instance.VaultPolicies, a.Config.TokenTTL, a.Config.OrphanTokens)
+	if err != nil {
+		a.incrementVaultError()
+		klog.Errorf("error getting vault token for spacelift stack %s: %s", instance.Stack, err.Error())
+		return
+	}
+	klog.V(10).Infof("got token %s for spacelift stack %s", token.Auth.ClientToken, instance.Stack)
+
+	envVars := []spacelift.EnvVar{
+		{
+			Key:       "VAULT_ADDR",
+			Value:     a.Config.VaultAddress,
+			WriteOnly: false,
+		},
+		{
+			Key:       a.Config.TokenVariable,
+			Value:     token.Auth.ClientToken,
+			WriteOnly: true,
+		},
+	}
+	if err := a.SpaceliftClient.SetEnvVars(instance.Stack, envVars); err != nil {
+		a.incrementSpaceliftError()
+		klog.Errorf("error setting variables in Spacelift stack %s: %s", instance.Stack, err.Error())
+		return
+	}
+	klog.Infof("successfully updated spacelift vars in stack: %s", instance.Stack)
 }
 
 func (a *App) updateTFCloudInstance(instance TFCloudConfig, wg *sync.WaitGroup) {

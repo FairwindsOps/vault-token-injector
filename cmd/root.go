@@ -26,22 +26,24 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/fairwindsops/vault-token-injector/pkg/app"
+	"github.com/fairwindsops/vault-token-injector/pkg/spacelift"
 )
 
 var (
-	cfgFile        string
-	circleToken    string
-	tfCloudToken   string
-	vaultTokenFile string
-	enableMetrics  bool
-	runOnce        bool
+	cfgFile         string
+	circleToken     string
+	tfCloudToken    string
+	vaultTokenFile  string
+	enableMetrics   bool
+	runOnce         bool
+	spaceliftClient = &spacelift.Client{}
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "vault-token-injector",
 	Short: "Inject vault tokens into other things",
 	Long: `vault-token-injector will generate a new vault token given a vault role
-and populate that token into environment variables used by other tools such as CircleCI or Terraform Cloud`,
+and populate that token into environment variables used by other tools such as CircleCI, Terraform Cloud, or Spacelift`,
 	RunE: run,
 }
 
@@ -51,7 +53,7 @@ func run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	app := app.NewApp(circleToken, vaultTokenFile, tfCloudToken, config, enableMetrics)
+	app := app.NewApp(circleToken, vaultTokenFile, tfCloudToken, config, enableMetrics, spaceliftClient)
 
 	if runOnce {
 		app.EnableMetrics = false
@@ -75,13 +77,19 @@ func init() {
 	rootCmd.Flags().StringVar(&circleToken, "circle-token", "", "A circleci token.")
 	rootCmd.Flags().StringVar(&tfCloudToken, "tfcloud-token", "", "A token for TFCloud access.")
 	rootCmd.Flags().StringVar(&vaultTokenFile, "vault-token-file", "", "A file that contains a vault token. Optional - can set VAULT_TOKEN directly if preferred.")
+	rootCmd.Flags().StringVar(&spaceliftClient.URL, "spacelift-url", "", "The URL of the spacelift instance.")
+	rootCmd.Flags().StringVar(&spaceliftClient.APIKeyID, "spacelift-key-id", "", "The spacelift api key ID")
+	rootCmd.Flags().StringVar(&spaceliftClient.APIKeySecret, "spacelift-key-secret", "", "the spacelift api key secret")
 	rootCmd.Flags().BoolVar(&enableMetrics, "enable-metrics", true, "Enable a prometheus endpoint on port 4329.")
 	rootCmd.Flags().BoolVar(&runOnce, "run-once", false, "If true, will run the token injection one time. Does not enable health endpoint or metrics.")
 
 	envMap := map[string]string{
-		"CIRCLE_CI_TOKEN":  "circle-token",
-		"TFCLOUD_TOKEN":    "tfcloud-token",
-		"VAULT_TOKEN_FILE": "vault-token-file",
+		"CIRCLE_CI_TOKEN":      "circle-token",
+		"TFCLOUD_TOKEN":        "tfcloud-token",
+		"VAULT_TOKEN_FILE":     "vault-token-file",
+		"SPACELIFT_KEY_ID":     "spacelift-key-id",
+		"SPACELIFT_KEY_SECRET": "spacelift-key-secret",
+		"SPACELIFT_URL":        "spacelift-url",
 	}
 
 	for env, flagName := range envMap {

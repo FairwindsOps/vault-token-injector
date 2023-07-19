@@ -4,15 +4,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fairwindsops/vault-token-injector/pkg/spacelift"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewApp(t *testing.T) {
 	type args struct {
-		circleToken    string
-		vaultTokenFile string
-		tfCloudToken   string
-		config         *Config
+		circleToken     string
+		vaultTokenFile  string
+		tfCloudToken    string
+		spaceliftClient *spacelift.Client
+		config          *Config
 	}
 	tests := []struct {
 		name string
@@ -62,7 +64,7 @@ func TestNewApp(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewApp(tt.args.circleToken, tt.args.vaultTokenFile, tt.args.tfCloudToken, tt.args.config, false)
+			got := NewApp(tt.args.circleToken, tt.args.vaultTokenFile, tt.args.tfCloudToken, tt.args.config, false, tt.args.spaceliftClient)
 			assert.EqualValues(t, tt.want, got)
 		})
 	}
