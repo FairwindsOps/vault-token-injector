@@ -6,12 +6,14 @@ import (
 )
 
 type Metrics struct {
-	totalErrorCount      prometheus.Counter
-	vaultErrorCount      prometheus.Counter
-	circleCIErrorCount   prometheus.Counter
-	circleTokensUpdated  prometheus.Counter
-	tfCloudErrorCount    prometheus.Counter
-	tfcloudTokensUpdated prometheus.Counter
+	totalErrorCount        prometheus.Counter
+	vaultErrorCount        prometheus.Counter
+	circleCIErrorCount     prometheus.Counter
+	circleTokensUpdated    prometheus.Counter
+	tfCloudErrorCount      prometheus.Counter
+	tfcloudTokensUpdated   prometheus.Counter
+	spaceliftErrorCount    prometheus.Counter
+	spaceliftTokensUpdated prometheus.Counter
 }
 
 func (a *App) registerMetrics() {
@@ -40,6 +42,14 @@ func (a *App) registerMetrics() {
 			Name: "vault_token_injector_tfcloud_tokens_updated",
 			Help: "The number of TFCloud tokens updated",
 		}),
+		spaceliftErrorCount: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "vault_token_injector_spacelift_errors_total",
+			Help: "The number of errors encountered when calling the Spacelift API",
+		}),
+		spaceliftTokensUpdated: promauto.NewCounter(prometheus.CounterOpts{
+			Name: "vault_token_injector_spacelift_tokens_updated",
+			Help: "The number of Spacelift tokens updated",
+		}),
 	}
 }
 
@@ -60,6 +70,13 @@ func (a App) incrementTfCloudError() {
 func (a App) incrementCircleCIError() {
 	if a.EnableMetrics {
 		a.Metrics.circleCIErrorCount.Inc()
+		a.Metrics.totalErrorCount.Inc()
+	}
+}
+
+func (a App) incrementSpaceliftError() {
+	if a.EnableMetrics {
+		a.Metrics.spaceliftErrorCount.Inc()
 		a.Metrics.totalErrorCount.Inc()
 	}
 }
