@@ -48,7 +48,7 @@ signs:
 
 docker_signs:
 - artifacts: all
-  args: ["sign", "--key=hashivault://cosign", "${artifact}", "-r"]
+  args: ["sign", "--key=hashivault://cosign", "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector@${digest}", "-r", "--yes"]
 
 dockers:
 - image_templates:
