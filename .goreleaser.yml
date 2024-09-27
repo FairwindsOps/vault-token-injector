@@ -43,7 +43,7 @@ checksum:
 
 signs:
 - cmd: cosign
-  args: ["sign-blob", "--key=hashivault://cosign", "-output-signature=${signature}", "${artifact}"]
+  args: ["sign-blob", "--yes", "--key=hashivault://cosign", "--output-signature=${signature}", "${artifact}"]
   artifacts: checksum
 
 docker_signs:
