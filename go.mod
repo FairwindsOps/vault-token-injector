@@ -1,6 +1,6 @@
 module github.com/fairwindsops/vault-token-injector
 
-go 1.20
+go 1.22
 
 require (
 	github.com/hashicorp/go-tfe v1.31.0
