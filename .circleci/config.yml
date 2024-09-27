@@ -18,7 +18,7 @@ jobs:
   test:
     working_directory: /home/circleci/go/src/github.com/fairwindsops/vault-token-injector
     docker:
-      - image: cimg/go:1.20
+      - image: cimg/go:1.22
     steps:
       - checkout
       - run:
