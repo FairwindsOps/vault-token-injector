@@ -1,4 +1,8 @@
+## DO NOT EDIT - Managed by Terraform
+# yaml-language-server: $$schema=https://goreleaser.com/static/schema.json
+
 version: 2
+project_name: vault-token-injector
 brews:
   - name: vault-token-injector
     goarm: 6
@@ -9,20 +13,9 @@ brews:
     description: Detect deprecated Kubernetes apiVersions
     test: |
       system "#{bin}/vault-token-injector version"
-release:
-  prerelease: auto
-  footer: |
-    You can verify the signatures of both the checksums.txt file and the published docker images using [cosign](https://github.com/sigstore/cosign).
-
-    ```
-    cosign verify-blob checksums.txt --signature=checksums.txt.sig  --key https://artifacts.fairwinds.com/cosign.pub
-    ```
-
-    ```
-    cosign verify us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:v1 --key https://artifacts.fairwinds.com/cosign.pub
-    ```
 builds:
-  - ldflags:
+  - id: vault-token-injector
+    ldflags:
       - -X main.version={{.Version}} -X main.commit={{.Commit}} -s -w
     main: main.go
     goarch:
@@ -38,9 +31,24 @@ builds:
     goarm:
       - 6
       - 7
+release:
+  disable: '{{ eq .Env.GORELEASER_SKIP_RELEASE "true" }}'
+  prerelease: auto
+  github:
+    owner: FairwindsOps
+    name: vault-token-injector
+  footer: |
+    You can verify the signatures of both the checksums.txt file and the published docker images using [cosign](https://github.com/sigstore/cosign).
+
+    ```bash
+    cosign verify-blob checksums.txt --signature=checksums.txt.sig  --key https://artifacts.fairwinds.com/cosign-p256.pub
+    ```
+
+    ```bash
+    cosign verify us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .Tag }} --key https://artifacts.fairwinds.com/cosign-p256.pub
+    ```
 checksum:
   name_template: "checksums.txt"
-
 signs:
   - cmd: cosign
     args:
@@ -50,48 +58,50 @@ signs:
       - "${artifact}"
       - "--yes"
     artifacts: all
-
 docker_signs:
-- artifacts: all
-  args: ["sign", "--key=hashivault://cosign-p256", "us-docker.pkg.dev/fairwinds-ops/oss/pluto@${digest}", "-r", "--yes"]
-
+  - artifacts: all
+    args: ["sign", "--key=hashivault://cosign-p256", "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector@${digest}", "-r", "--yes"]
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
 dockers:
-- image_templates:
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .Tag }}-amd64"
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:v{{ .Major }}-amd64"
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:v{{ .Major }}.{{ .Minor }}-amd64"
-  dockerfile: Dockerfile
-  build_flag_templates:
-  - "--platform=linux/amd64"
-- image_templates:
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .Tag }}-arm64v8"
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:v{{ .Major }}-arm64v8"
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:v{{ .Major }}.{{ .Minor }}-arm64v8"
-  goarch: arm64
-  dockerfile: Dockerfile
-  build_flag_templates:
-  - "--platform=linux/arm64/v8"
-- image_templates:
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .Tag }}-armv7"
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:v{{ .Major }}-armv7"
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:v{{ .Major }}.{{ .Minor }}-armv7"
-  goarch: arm64
-  dockerfile: Dockerfile
-  build_flag_templates:
-  - "--platform=linux/arm/v7"
+   - image_templates:
+        - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .FullCommit }}-amd64"
+        - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .Tag }}-amd64"
+     use: buildx
+     dockerfile: Dockerfile
+     build_flag_templates:
+        - "--platform=linux/amd64"
+   - image_templates:
+        - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .FullCommit }}-arm64v8"
+        - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .Tag }}-arm64v8"
+     use: buildx
+     goarch: arm64
+     goos: linux
+     dockerfile: Dockerfile
+     build_flag_templates:
+        - "--platform=linux/arm64/v8"
+   - image_templates:
+        - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .FullCommit }}-armv7"
+        - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .Tag }}-armv7"
+     use: buildx
+     goarch: arm
+     goarm: 7
+     goos: linux
+     dockerfile: Dockerfile
+     build_flag_templates:
+        - "--platform=linux/arm/v7"
 docker_manifests:
-- name_template: us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .Tag }}
-  image_templates:
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .Tag }}-amd64"
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .Tag }}-arm64v8"
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .Tag }}-armv7"
-- name_template: us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:v{{ .Major }}
-  image_templates:
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:v{{ .Major }}-amd64"
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:v{{ .Major }}-arm64v8"
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:v{{ .Major }}-armv7"
-- name_template: us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:v{{ .Major }}.{{ .Minor }}
-  image_templates:
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:v{{ .Major }}.{{ .Minor }}-amd64"
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:v{{ .Major }}.{{ .Minor }}-arm64v8"
-  - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:v{{ .Major }}.{{ .Minor }}-armv7"
+  - name_template: us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .Tag }}
+    image_templates:
+      - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .Tag }}-amd64"
+      - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .Tag }}-arm64v8"
+      - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .Tag }}-armv7"
+  - name_template: us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .FullCommit }}
+    image_templates:
+      - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .FullCommit }}-amd64"
+      - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .FullCommit }}-arm64v8"
+      - "us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:{{ .FullCommit }}-armv7"
