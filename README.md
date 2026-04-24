@@ -46,3 +46,41 @@ Note that the time intervals are golang time.Duration strings
 * Disable `VAULT_ADDR` injection
 * Use Vault API instead of vault binary
 * Prometheus endpoint to bubble up errors and successes
+
+## Notice: Registry Migration and Immutable Images (v1.10.0 → v1.11.0)
+
+Starting with **v1.11.0**:
+
+- Images moved to `us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector`
+- `quay.io/fairwinds/vault-token-injector` is deprecated
+
+### Required action
+
+```diff
+- quay.io/fairwinds/vault-token-injector:<tag>
++ us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:<tag>
+```
+
+---
+
+## Immutable and signed images
+
+* Images are now **signed**
+* Tags are **immutable**
+* No more floating tags:
+
+  * `v1`
+  * `v1.10`
+  * `latest`
+
+Use full version tags:
+
+```
+us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector:v<major>.<minor>.<patch>
+```
+
+Or pin by digest:
+
+```
+us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector@sha256:<digest>
+```
