@@ -47,9 +47,9 @@ Note that the time intervals are golang time.Duration strings
 * Use Vault API instead of vault binary
 * Prometheus endpoint to bubble up errors and successes
 
-## Notice: Registry Migration and Immutable Images (v1.10.0 → v1.11.0)
+## Notice: Registry Migration and Immutable Images (v1.11.0 → v1.12.0)
 
-Starting with **v1.11.0**:
+Starting with **v1.12.0**:
 
 - Images moved to `us-docker.pkg.dev/fairwinds-ops/oss/vault-token-injector`
 - `quay.io/fairwinds/vault-token-injector` is deprecated
@@ -70,7 +70,7 @@ Starting with **v1.11.0**:
 * No more floating tags:
 
   * `v1`
-  * `v1.10`
+  * `v1.11`
   * `latest`
 
 Use full version tags:
