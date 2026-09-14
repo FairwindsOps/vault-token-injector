@@ -1,72 +1,101 @@
-# Use the latest 2.1 version of CircleCI pipeline process engine. See: https://circleci.com/docs/2.0/configuration-reference
+## DO NOT EDIT - Managed by Terraform
 version: 2.1
 
 orbs:
-  rok8s: fairwinds/rok8s-scripts@14
+  rok8s: fairwinds/rok8s-scripts@17.0.0
 
 references:
-  install_vault: &install_vault
+  install_vault_machine: &install_vault_machine
     run:
       name: install hashicorp vault
       command: |
+        sudo apt-get update -y && sudo apt-get install -y curl unzip
         cd /tmp
-        curl -LO https://releases.hashicorp.com/vault/1.20.3/vault_1.20.3_linux_amd64.zip
-        unzip vault_1.20.3_linux_amd64.zip
-        mv vault /usr/bin/vault
-        apk --update add yq
+        curl -LO https://releases.hashicorp.com/vault/1.21.4/vault_1.21.4_linux_amd64.zip
+        echo '889b681990fe221b884b7932fa9c9dd0ee9811b9349554f1aa287ab63c9f3dae  vault_1.21.4_linux_amd64.zip' | sha256sum -c
+        unzip -o vault_1.21.4_linux_amd64.zip
+        sudo mv vault /usr/bin/vault
+  setup_qemu_binfmt: &setup_qemu_binfmt
+    run:
+      name: Setup QEMU for multi-arch Docker builds
+      command: |
+        sudo apt-get update -y
+        sudo apt-get install -y qemu-user-static binfmt-support
+        docker buildx create --use || true
+        docker buildx inspect --bootstrap
+
 jobs:
   test:
-    working_directory: /home/circleci/go/src/github.com/fairwindsops/vault-token-injector
     docker:
-      - image: cimg/go:1.24
+      - image: cimg/go:1.27.1
     steps:
       - checkout
       - run:
-          name: Go Mod
+          name: Go Mod Download
           command: go mod download && go mod verify
       - run:
-          name: Run Tests
+          name: test
           command: |
-            go test -v ./... -coverprofile=coverage.txt -covermode=atomic
-      - store_test_results:
-          path: /tmp/test_results
+            go test -v -coverprofile=coverage.txt -covermode=atomic ./...
+            go vet ./...
+  snapshot:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: large
+    steps:
+      - checkout
+      - *setup_qemu_binfmt
+      - run:
+          name: Run GoReleaser snapshot
+          command: |
+            docker run --rm \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v "$(pwd):/workspace" -w /workspace \
+              -e CIRCLE_SHA1 \
+              -e CIRCLE_BRANCH \
+              -e CIRCLE_TAG \
+              goreleaser/goreleaser:v2.18.1 release --snapshot --skip=sign
+      - store_artifacts:
+          path: dist
+          destination: snapshot
   release:
-    docker:
-      - image: goreleaser/goreleaser:v2.12.0-nightly
+    machine:
+      image: ubuntu-2204:current
     resource_class: large
     shell: /bin/bash
     steps:
       - checkout
-      - *install_vault
+      - *install_vault_machine
       - rok8s/get_vault_env:
           vault_path: repo/global/env
-      - setup_remote_docker
       - run:
-          name: docker login
+          name: docker login Google Artifact Registry
           command: |
-            docker login -u _json_key -p "$(echo $GCP_ARTIFACTREADWRITE_JSON_KEY | base64 -d)" us-docker.pkg.dev
-      - run: echo 'export GORELEASER_CURRENT_TAG="${CIRCLE_TAG}"' >> $BASH_ENV
-      - run: goreleaser
-  snapshot:
-    docker:
-      - image: goreleaser/goreleaser:v2.12.0-nightly
-    steps:
-      - checkout
-      - setup_remote_docker
+            echo "$GCP_ARTIFACTREADWRITE_JSON_KEY" | base64 -d | docker login -u _json_key --password-stdin us-docker.pkg.dev
+      - *setup_qemu_binfmt
       - run:
-          name: Goreleaser Snapshot
-          command: goreleaser --snapshot --skip=sign
-      - store_artifacts:
-          path: dist
-          destination: snapshot
+          name: Run GoReleaser release
+          command: |
+            export GORELEASER_CURRENT_TAG="${CIRCLE_TAG}"
+            docker run --rm \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v "$(pwd):/workspace" -w /workspace \
+              -v "${HOME}/.docker:/root/.docker" \
+              -e GORELEASER_CURRENT_TAG \
+              -e CIRCLE_TAG \
+              -e CIRCLE_SHA1 \
+              -e GO111MODULE=on \
+              -e GITHUB_TOKEN \
+              -e VAULT_ADDR \
+              -e VAULT_TOKEN \
+              goreleaser/goreleaser:v2.18.1 release
+
 workflows:
   version: 2
-  test:
+  test_and_build:
     jobs:
       - test:
           filters:
-            branches:
-              only: /.*/
             tags:
               ignore: /.*/
       - snapshot:
@@ -77,7 +106,18 @@ workflows:
               only: /.*/
             tags:
               ignore: /.*/
+  release:
+    jobs:
+      - test:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /v.*/
       - release:
+          requires:
+            - test
+          context: org-global
           filters:
             branches:
               ignore: /.*/
