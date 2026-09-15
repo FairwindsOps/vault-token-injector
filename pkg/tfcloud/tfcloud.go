@@ -3,7 +3,7 @@ package tfcloud
 import (
 	"context"
 
-	tfe "github.com/hashicorp/go-tfe"
+	tfe "github.com/hashicorp/go-tfe/v2"
 	"k8s.io/klog/v2"
 )
 
