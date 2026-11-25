@@ -2,10 +2,15 @@ package tfcloud
 
 import (
 	"context"
+	"fmt"
 
 	tfe "github.com/hashicorp/go-tfe/v2"
+	"github.com/hashicorp/go-tfe/v2/api/models"
 	"k8s.io/klog/v2"
 )
+
+// tfeAddress is the Terraform API root. Tests point it at an httptest server.
+var tfeAddress = tfe.DefaultAddress
 
 type Variable struct {
 	Workspace           string
@@ -19,51 +24,57 @@ type Variable struct {
 // Update will update a variable in TFCloud.
 func (v Variable) Update() error {
 	klog.Infof("setting env var %s in TFCloud workspace %s", v.Key, v.WorkspaceIdentifier)
-	config := &tfe.Config{
-		Token: v.Token,
-	}
-
-	client, err := tfe.NewClient(config)
+	client, err := tfe.NewClient(&tfe.Config{
+		Address: tfeAddress,
+		Token:   v.Token,
+	})
 	if err != nil {
 		return err
 	}
 	ctx := context.Background()
-
-	category := tfe.CategoryEnv
 	description := "Auto-Injected by vault-token-injector"
 
-	tfvars, err := client.Variables.List(ctx, v.Workspace, &tfe.VariableListOptions{
-		ListOptions: tfe.ListOptions{
-			PageNumber: 1,
-			PageSize:   1000,
-		},
-	})
+	varsClient := client.API.Workspaces().ByWorkspace_id(v.Workspace).Vars()
+	listed, err := varsClient.Get(ctx, nil)
 	if err != nil {
 		return err
 	}
-	for _, tfvar := range tfvars.Items {
-		if tfvar.Key == v.Key {
+	if listed != nil {
+		for _, tfvar := range listed.GetData() {
+			attrs := tfvar.GetAttributes()
+			if attrs == nil || attrs.GetKey() == nil || *attrs.GetKey() != v.Key {
+				continue
+			}
+			id := tfvar.GetId()
+			if id == nil || *id == "" {
+				return fmt.Errorf("tfcloud variable %s has no id", v.Key)
+			}
 			klog.Infof("var %s already exists in TFCloud workspace %s, updating instead", v.Key, v.WorkspaceIdentifier)
 
-			_, err = client.Variables.Update(ctx, v.Workspace, tfvar.ID, tfe.VariableUpdateOptions{
-				Description: &description,
-				Sensitive:   &v.Sensitive,
-				Value:       &v.Value,
-			})
-			if err != nil {
-				return err
-			}
-			return nil
+			_, err = varsClient.ById(*id).Patch(ctx, envVarEnvelope(nil, &v.Value, &description, &v.Sensitive, nil), nil)
+			return err
 		}
 	}
 
-	_, err = client.Variables.Create(ctx, v.Workspace, tfe.VariableCreateOptions{
-		Key:         &v.Key,
-		Value:       &v.Value,
-		Description: &description,
-		Sensitive:   &v.Sensitive,
-		Category:    &category,
-	})
-
+	category := models.ENV_VARS_ATTRIBUTES_CATEGORY
+	_, err = varsClient.Post(ctx, envVarEnvelope(&v.Key, &v.Value, &description, &v.Sensitive, &category), nil)
 	return err
+}
+
+func envVarEnvelope(key, value, description *string, sensitive *bool, category *models.Vars_attributes_category) *models.VarsEnvelope {
+	attrs := models.NewVars_attributes()
+	attrs.SetKey(key)
+	attrs.SetValue(value)
+	attrs.SetDescription(description)
+	attrs.SetSensitive(sensitive)
+	attrs.SetCategory(category)
+
+	varType := models.VARS_VARS_TYPE
+	data := models.NewVars()
+	data.SetTypeEscaped(&varType)
+	data.SetAttributes(attrs)
+
+	body := models.NewVarsEnvelope()
+	body.SetData(data)
+	return body
 }
