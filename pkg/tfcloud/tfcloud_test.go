@@ -25,6 +25,22 @@ func TestUpdateCreatesOrPatchesEnvVar(t *testing.T) {
 			wantPath:   "/api/v2/workspaces/ws-1/vars/var-1",
 		},
 		{
+			name: "updates env when a terraform var shares the key",
+			list: `{"data":[` +
+				`{"id":"var-tf","type":"vars","attributes":{"key":"VAULT_TOKEN","category":"terraform"}},` +
+				`{"id":"var-env","type":"vars","attributes":{"key":"VAULT_TOKEN","category":"env","sensitive":true}}` +
+				`]}`,
+			wantMethod: http.MethodPatch,
+			wantPath:   "/api/v2/workspaces/ws-1/vars/var-env",
+		},
+		{
+			name:       "creates env when only a terraform var exists",
+			list:       `{"data":[{"id":"var-tf","type":"vars","attributes":{"key":"VAULT_TOKEN","category":"terraform"}}]}`,
+			wantMethod: http.MethodPost,
+			wantPath:   "/api/v2/workspaces/ws-1/vars",
+			wantKey:    true,
+		},
+		{
 			name:       "creates missing",
 			list:       `{"data":[]}`,
 			wantMethod: http.MethodPost,
@@ -35,12 +51,14 @@ func TestUpdateCreatesOrPatchesEnvVar(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var gotMethod, gotPath string
+			var gotMethod, gotPath, gotListPath, gotAuth string
 			var gotBody map[string]any
 
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/vnd.api+json")
 				if r.Method == http.MethodGet {
+					gotListPath = r.URL.Path
+					gotAuth = r.Header.Get("Authorization")
 					w.Write([]byte(tt.list))
 					return
 				}
@@ -69,6 +87,9 @@ func TestUpdateCreatesOrPatchesEnvVar(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			if gotListPath != "/api/v2/workspaces/ws-1/vars" || gotAuth != "Bearer test-token" {
+				t.Fatalf("list = %s auth %q", gotListPath, gotAuth)
+			}
 			if gotMethod != tt.wantMethod || gotPath != tt.wantPath {
 				t.Fatalf("request = %s %s, want %s %s", gotMethod, gotPath, tt.wantMethod, tt.wantPath)
 			}
@@ -88,5 +109,43 @@ func TestUpdateCreatesOrPatchesEnvVar(t *testing.T) {
 				t.Fatalf("category = %v", attrs["category"])
 			}
 		})
+	}
+}
+
+func TestUpdateRetriesRateLimit(t *testing.T) {
+	var gets int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/vnd.api+json")
+		if r.Method == http.MethodGet {
+			gets++
+			if gets == 1 {
+				w.Header().Set("Retry-After", "0.01")
+				w.WriteHeader(http.StatusTooManyRequests)
+				return
+			}
+			w.Write([]byte(`{"data":[]}`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"data":{"id":"var-1","type":"vars","attributes":{"key":"VAULT_TOKEN"}}}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	orig := tfeAddress
+	tfeAddress = srv.URL
+	t.Cleanup(func() { tfeAddress = orig })
+
+	err := Variable{
+		Workspace: "ws-1",
+		Key:       "VAULT_TOKEN",
+		Value:     "s.secret",
+		Token:     "test-token",
+		Sensitive: true,
+	}.Update()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gets != 2 {
+		t.Fatalf("list attempts = %d, want 2", gets)
 	}
 }

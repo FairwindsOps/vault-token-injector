@@ -25,8 +25,9 @@ type Variable struct {
 func (v Variable) Update() error {
 	klog.Infof("setting env var %s in TFCloud workspace %s", v.Key, v.WorkspaceIdentifier)
 	client, err := tfe.NewClient(&tfe.Config{
-		Address: tfeAddress,
-		Token:   v.Token,
+		Address:          tfeAddress,
+		Token:            v.Token,
+		RetryRateLimited: true, // v1 retried 429 by default; v2 does not
 	})
 	if err != nil {
 		return err
@@ -43,6 +44,11 @@ func (v Variable) Update() error {
 		for _, tfvar := range listed.GetData() {
 			attrs := tfvar.GetAttributes()
 			if attrs == nil || attrs.GetKey() == nil || *attrs.GetKey() != v.Key {
+				continue
+			}
+			// Same key may exist as a terraform variable. Only the env var is injected.
+			cat := attrs.GetCategory()
+			if cat == nil || *cat != models.ENV_VARS_ATTRIBUTES_CATEGORY {
 				continue
 			}
 			id := tfvar.GetId()
