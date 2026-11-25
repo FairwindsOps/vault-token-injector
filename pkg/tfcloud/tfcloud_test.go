@@ -2,9 +2,11 @@ package tfcloud
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -147,5 +149,73 @@ func TestUpdateRetriesRateLimit(t *testing.T) {
 	}
 	if gets != 2 {
 		t.Fatalf("list attempts = %d, want 2", gets)
+	}
+}
+
+func TestUpdateFindsEnvVarOnLaterPage(t *testing.T) {
+	var pages []string
+	var gotMethod, gotPath string
+	var gotBody map[string]any
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/vnd.api+json")
+		if r.Method == http.MethodGet {
+			page := r.URL.Query().Get("page[number]")
+			pages = append(pages, page)
+			if r.URL.Path != "/api/v2/workspaces/ws-1/vars" || r.URL.Query().Get("page[size]") != "100" {
+				t.Errorf("list = %s?%s", r.URL.Path, r.URL.RawQuery)
+			}
+			if page == "1" {
+				var b strings.Builder
+				b.WriteString(`{"data":[`)
+				b.WriteString(`{"id":"var-tf","type":"vars","attributes":{"key":"VAULT_TOKEN","category":"terraform"}}`)
+				for i := 1; i < varPageSize; i++ {
+					fmt.Fprintf(&b, `,{"id":"var-%d","type":"vars","attributes":{"key":"OTHER_%d","category":"env"}}`, i, i)
+				}
+				b.WriteString(`]}`)
+				w.Write([]byte(b.String()))
+				return
+			}
+			w.Write([]byte(`{"data":[{"id":"var-env","type":"vars","attributes":{"key":"VAULT_TOKEN","category":"env","sensitive":true}}]}`))
+			return
+		}
+		gotMethod = r.Method
+		gotPath = r.URL.Path
+		raw, _ := io.ReadAll(r.Body)
+		if err := json.Unmarshal(raw, &gotBody); err != nil {
+			t.Errorf("decode body: %v", err)
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"data":{"id":"var-env","type":"vars","attributes":{"key":"VAULT_TOKEN"}}}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	orig := tfeAddress
+	tfeAddress = srv.URL
+	t.Cleanup(func() { tfeAddress = orig })
+
+	err := Variable{
+		Workspace: "ws-1",
+		Key:       "VAULT_TOKEN",
+		Value:     "s.secret",
+		Token:     "test-token",
+		Sensitive: true,
+	}.Update()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pages) != 2 || pages[0] != "1" || pages[1] != "2" {
+		t.Fatalf("pages = %#v", pages)
+	}
+	if gotMethod != http.MethodPatch || gotPath != "/api/v2/workspaces/ws-1/vars/var-env" {
+		t.Fatalf("request = %s %s", gotMethod, gotPath)
+	}
+	data := gotBody["data"].(map[string]any)
+	attrs := data["attributes"].(map[string]any)
+	if attrs["value"] != "s.secret" {
+		t.Fatalf("attributes = %#v", attrs)
+	}
+	if _, ok := attrs["key"]; ok {
+		t.Fatalf("key present in patch: %#v", attrs)
 	}
 }
